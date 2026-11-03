@@ -31,7 +31,7 @@ h2{margin:4px 0 12px;font-size:20px}
 .sub{color:var(--muted);font-size:13px;margin:-6px 0 12px}
 
 /* ---- нижняя навигация ---- */
-.nav{display:grid;grid-template-columns:repeat(5,1fr);background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.nav{display:grid;grid-template-columns:repeat(6,1fr);background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
 body.tg .app{max-width:none;box-shadow:none}
 .nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 10px;font-size:11px;color:var(--muted)}
 .nav button .i{font-size:22px}
@@ -183,6 +183,14 @@ body.tg .app{max-width:none;box-shadow:none}
 .mults button.on{background:var(--accent);color:#1a1400}.mults button.on small{color:#4a3a00}
 .mults button:disabled{opacity:.35}
 .news{text-align:left;line-height:1.7;font-size:14px;margin-top:10px;background:var(--panel2);border-radius:14px;padding:12px}
+.nav button{font-size:10px}
+.invite{display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,#3a2a6b,#1f2840);border-radius:16px;padding:12px;margin-bottom:10px}
+.invite .e{font-size:34px}.invite .tx b{display:block}.invite .tx small{color:var(--muted);font-size:12px}
+.toplist{display:flex;flex-direction:column;gap:6px}
+.trow{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:12px;padding:10px 12px}
+.trow.me{background:linear-gradient(90deg,#4a3a00,var(--panel2));border:1px solid var(--accent)}
+.trow .md{width:30px;text-align:center;font-size:20px}.trow .pl{font-size:14px;color:var(--muted);font-weight:800}
+.trow .nm{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.trow .sc{font-weight:900;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -200,6 +208,7 @@ body.tg .app{max-width:none;box-shadow:none}
     <button data-s="inv"><span class="i">🎒</span>Вещи</button>
     <button data-s="chats"><span class="i">💬</span>Чаты</button>
     <button data-s="work"><span class="i">💻</span>Работа</button>
+    <button data-s="rating"><span class="i">🏆</span>Топ</button>
     <button data-s="profile"><span class="i">👤</span>Профиль</button>
   </nav>
 </div>
@@ -330,7 +339,7 @@ function go(s) { screen = s; if (s !== "chats") openChatId = null; render(); }
 function render() {
   $("#screen").style.overflowY = "";
   document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.s === screen));
-  ({ cases: renderCases, inv: renderInv, chats: renderChats, work: renderWork, profile: renderProfile })[screen]();
+  ({ cases: renderCases, inv: renderInv, chats: renderChats, work: renderWork, rating: renderRating, profile: renderProfile })[screen]();
   renderTop();
 }
 
@@ -967,7 +976,7 @@ function confirmBox(title, text, yes, onYes) {
 // =====================================================================
 //                       ВЕРСИЯ 1.1 — НОВЫЕ ФИШКИ
 // =====================================================================
-const VERSION = "1.1";
+const VERSION = "1.2";
 
 // ---------- звуки (синтез, без файлов) ----------
 let AC = null;
@@ -1173,7 +1182,7 @@ function whatsNew() {
       <div class="news">📦 Открывай кейсы — там всё, от ручки до острова<br>💬 Выставляй вещи и торгуйся с покупателями в чатах<br>⚠️ Остерегайся мошенников и троллей<br>💻 Нет денег — поработай на фрилансе<br>🏆 Собери коллекцию и стань олигархом!</div>
       <div class="btns"><button class="btn y" id="ok">Погнали!</button></div></div>`
     : `<div class="modal"><div class="drop">🎉</div><div class="iname">Обновление ${VERSION}</div>
-      <div class="news">⬆️ <b>Апгрейд</b> — рискни вещью и получи дороже (до ×10)<br>📈 <b>События рынка</b> — хайп, кризис, час пик, волна мошенников<br>👵 Новые покупатели: <b>бабушка</b>, <b>блогер</b> с рекламой и <b>перекупщик</b><br>🏆 <b>19 достижений</b> с наградами — смотри в Профиле<br>🔊 <b>Звуки</b> и 🎊 <b>конфетти</b> за редкие вещи<br>🛠 Исправлены мелкие ошибки</div>
+      <div class="news">🏆 <b>Топ игроков</b> и 👥 <b>«Позови друга»</b> — +50 000 ₽ вам обоим (в Telegram)<br>⬆️ <b>Апгрейд</b> — рискни вещью и получи дороже (до ×10)<br>📈 <b>События рынка</b> — хайп, кризис, час пик, волна мошенников<br>👵 Новые покупатели: <b>бабушка</b>, <b>блогер</b> с рекламой и <b>перекупщик</b><br>🏆 <b>19 достижений</b> с наградами — смотри в Профиле<br>🔊 <b>Звуки</b> и 🎊 <b>конфетти</b> за редкие вещи<br>🛠 Исправлены мелкие ошибки</div>
       <div class="btns"><button class="btn y" id="ok">Круто!</button></div></div>`;
   $("#app").appendChild(ov);
   ov.querySelector("#ok").onclick = () => { ov.remove(); snd("win"); };
@@ -1259,6 +1268,75 @@ function cloudLoad() {
   });
 }
 cloudLoad();
+
+// =====================================================================
+//              ТОП ИГРОКОВ И «ПОЗОВИ ДРУГА» (через сервер)
+// =====================================================================
+const API = "https://perekup.kalaidzhan19972.workers.dev";            // адрес сервера Cloudflare Worker
+const BOT = "perekup_cases_bot";
+let NET = { top: null, place: null, refs: 0, id: null, err: null, at: 0 };
+const myTgId = () => TG && TG.initDataUnsafe && TG.initDataUnsafe.user ? TG.initDataUnsafe.user.id : null;
+const refLink = () => `https://t.me/${BOT}?start=ref_${myTgId()}`;
+
+async function syncNet(force) {
+  if (!TG || !API.startsWith("https://")) return;
+  if (!force && Date.now() - NET.at < 20000) return;
+  NET.at = Date.now();
+  try {
+    const r = await fetch(API + "/api/sync", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ initData: TG.initData, score: Math.round(netWorth()) }) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "ошибка");
+    NET = Object.assign(NET, { top: j.top, place: j.place, refs: j.refs, id: j.id, err: null });
+    if (j.bonus > 0) {
+      addMoney(j.bonus); S.stats.refBonus = (S.stats.refBonus || 0) + j.bonus; save();
+      snd("win"); confetti(120);
+      toast((j.notes || []).join("<br>") || `🎁 +${fmt(j.bonus)} ₽`);
+    }
+  } catch (e) { NET.err = "Не удалось связаться с сервером"; }
+  if (screen === "rating") renderRating();
+}
+
+function renderRating() {
+  const el = $("#screen");
+  if (!TG) {
+    el.innerHTML = `<h2>🏆 Топ игроков</h2>
+      <div class="empty">Рейтинг и приглашения друзей работают в Telegram.<br><br>
+      Открой игру через бота <b>@${BOT}</b> 🎮</div>`;
+    return;
+  }
+  const top = NET.top;
+  const medal = i => ["🥇", "🥈", "🥉"][i] || `<span class="pl">${i + 1}</span>`;
+  el.innerHTML = `
+    <h2>🏆 Топ перекупов</h2>
+    <div class="sub">Рейтинг по состоянию: деньги + стоимость вещей. ${NET.place ? `Ты на <b>${NET.place}</b> месте` : ""}</div>
+    <div class="invite">
+      <div class="e">👥</div>
+      <div class="tx"><b>Позови друга — +50 000 ₽ обоим!</b><small>Друг открывает бота по твоей ссылке и заходит в игру. Приглашено: <b>${NET.refs || 0}</b></small></div>
+    </div>
+    <div class="row2" style="margin-bottom:16px">
+      <button class="btn y" id="share">📨 Пригласить</button>
+      <button class="btn" id="copy">🔗 Копировать ссылку</button>
+    </div>
+    ${NET.err ? `<div class="empty">${NET.err}<br><button class="btn" id="retry" style="margin-top:10px">Повторить</button></div>`
+      : !top ? `<div class="empty">Загружаю рейтинг…</div>`
+      : `<div class="toplist">${top.map((t, i) => `<div class="trow ${t.me ? "me" : ""}"><div class="md">${medal(i)}</div>
+          <div class="nm">${esc(t.name)}${t.me ? " (ты)" : ""}</div><div class="sc">${short(t.score)} ₽</div></div>`).join("")}</div>`}`;
+  $("#share").onclick = () => {
+    const text = "Залетай в «Перекуп» — открывай кейсы, торгуйся и стань олигархом! По моей ссылке +50 000 ₽ на старте 🎁";
+    TG.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(refLink())}&text=${encodeURIComponent(text)}`);
+  };
+  $("#copy").onclick = async () => {
+    try { await navigator.clipboard.writeText(refLink()); toast("🔗 Ссылка скопирована"); }
+    catch (e) { toast(refLink()); }
+  };
+  const rt = $("#retry"); if (rt) rt.onclick = () => { NET.err = null; renderRating(); syncNet(true); };
+}
+const _go = go;
+go = function (s) { _go(s); if (s === "rating") syncNet(true); };
+document.querySelectorAll(".nav button").forEach(b => b.onclick = () => go(b.dataset.s));
+setInterval(() => syncNet(false), 60000);
+setTimeout(() => syncNet(true), 2500);
 
 // ---------- старт ----------
 if (S.inv.some(e => e.status === "listed")) scheduleBuyer(4000);
