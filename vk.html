@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Перекуп — кейсы, сделки и чаты</title>
+<script src="https://unpkg.com/@vkontakte/vk-bridge@2/dist/browser.min.js"></script>
+<style>
+:root{
+  --bg:#0f1420; --panel:#171e2e; --panel2:#1f2840; --line:#2a3550; --text:#e9eef8; --muted:#8d99b3;
+  --accent:#ffd23f; --green:#33d17a; --red:#ff5c5c; --blue:#3d8bfd;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#090c14;color:var(--text);font-family:"Segoe UI",Roboto,Arial,sans-serif;overflow:hidden}
+button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
+.app{position:relative;max-width:560px;height:100%;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;box-shadow:0 0 60px rgba(0,0,0,.6)}
+
+/* ---- верхняя панель ---- */
+.top{display:flex;align-items:center;gap:10px;padding:12px 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+.logo{font-weight:900;font-size:18px;letter-spacing:1px;color:var(--accent)}
+.money{margin-left:auto;display:flex;align-items:center;gap:6px;background:#0b101b;border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-weight:800;font-size:16px}
+.money .cur{color:var(--accent)}
+.gift{position:relative;font-size:22px;padding:4px 8px;border-radius:12px;background:var(--panel2)}
+.gift.ready{animation:wiggle 1.2s infinite}
+.gift.ready::after{content:"";position:absolute;top:2px;right:2px;width:9px;height:9px;border-radius:50%;background:var(--red)}
+@keyframes wiggle{0%,100%{transform:rotate(0)}10%{transform:rotate(-12deg)}20%{transform:rotate(12deg)}30%{transform:rotate(0)}}
+
+/* ---- контент ---- */
+.screen{flex:1;overflow-y:auto;padding:14px;padding-bottom:20px}
+h2{margin:4px 0 12px;font-size:20px}
+.sub{color:var(--muted);font-size:13px;margin:-6px 0 12px}
+
+/* ---- нижняя навигация ---- */
+.nav{display:grid;grid-template-columns:repeat(6,1fr);background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+body.tg .app{max-width:none;box-shadow:none}
+.nav button{position:relative;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 10px;font-size:11px;color:var(--muted)}
+.nav button .i{font-size:22px}
+.nav button.on{color:var(--accent)}
+.badge{position:absolute;top:4px;left:calc(50% + 6px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center}
+
+/* ---- кейсы ---- */
+.cases{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.case{position:relative;border-radius:18px;padding:14px;background:linear-gradient(160deg,var(--c) -40%,var(--panel2) 70%);border:2px solid color-mix(in srgb,var(--c) 60%,transparent);text-align:center;overflow:hidden}
+.case .big{font-size:52px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4))}
+.case .nm{font-weight:800;font-size:16px;margin-top:4px}
+.case .pr{margin-top:8px;display:inline-block;background:#0b101b;border-radius:10px;padding:5px 12px;font-weight:800;color:var(--accent)}
+.case.locked{opacity:.55}
+.case .range{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* ---- рулетка ---- */
+.overlay{position:absolute;inset:0;background:rgba(5,8,14,.86);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal{width:100%;background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px;text-align:center}
+.roulette{position:relative;height:150px;overflow:hidden;border-radius:14px;background:#0b101b;border:1px solid var(--line);margin:10px 0}
+.strip{position:absolute;top:15px;left:0;display:flex;gap:8px;will-change:transform}
+.rcard{flex:0 0 110px;height:120px;border-radius:12px;background:var(--panel2);display:flex;flex-direction:column;align-items:center;justify-content:center;border-bottom:5px solid var(--rc);font-size:12px;padding:4px}
+.rcard .e{font-size:46px}
+.rcard .n{margin-top:4px;line-height:1.1;color:#cfd7e8}
+.pointer{position:absolute;left:50%;top:0;bottom:0;width:3px;background:var(--accent);transform:translateX(-50%);box-shadow:0 0 12px var(--accent);z-index:2}
+.pointer::before,.pointer::after{content:"";position:absolute;left:50%;transform:translateX(-50%);border:9px solid transparent}
+.pointer::before{top:0;border-top-color:var(--accent)}
+.pointer::after{bottom:0;border-bottom-color:var(--accent)}
+
+.drop{font-size:84px;margin:6px 0;animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{from{transform:scale(.2)}to{transform:scale(1)}}
+.rar{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;color:#0b101b;background:var(--rc)}
+.iname{font-size:20px;font-weight:800;margin:8px 0 2px}
+.iprice{color:var(--muted);font-size:14px}
+.btns{display:grid;gap:8px;margin-top:14px}
+.btn{padding:12px;border-radius:14px;font-weight:800;background:var(--panel2);border:1px solid var(--line)}
+.btn.y{background:var(--accent);color:#1a1400;border:0}
+.btn.g{background:var(--green);color:#04230f;border:0}
+.btn.r{background:#3a1d24;color:#ffb3b3;border:1px solid #5a2833}
+.btn:disabled{opacity:.45;cursor:default}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.toggle{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;color:var(--muted);font-size:13px}
+
+/* ---- инвентарь ---- */
+.tabs{display:flex;gap:6px;margin-bottom:12px}
+.tabs button{padding:7px 12px;border-radius:999px;background:var(--panel2);font-size:13px;font-weight:700;color:var(--muted)}
+.tabs button.on{background:var(--accent);color:#1a1400}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.item{position:relative;border-radius:14px;background:var(--panel2);padding:10px 6px 8px;text-align:center;border-bottom:4px solid var(--rc)}
+.item .e{font-size:40px}
+.item .n{font-size:12px;line-height:1.15;margin-top:4px;min-height:28px}
+.item .p{font-size:12px;color:var(--accent);font-weight:800;margin-top:2px}
+.item .tag{position:absolute;top:6px;right:6px;font-size:10px;font-weight:800;background:var(--green);color:#04230f;border-radius:6px;padding:1px 5px}
+.empty{color:var(--muted);text-align:center;padding:40px 10px;line-height:1.5}
+
+/* продажа */
+.slider{width:100%;accent-color:var(--accent);margin:14px 0 6px}
+.pricebig{font-size:28px;font-weight:900;color:var(--accent)}
+.hint{font-size:13px;margin-top:4px}
+.bar{position:relative;height:8px;border-radius:4px;background:linear-gradient(90deg,#33d17a,#ffd23f 50%,#ff5c5c);margin:8px 0 2px}
+.bar i{position:absolute;top:-4px;width:4px;height:16px;background:#fff;border-radius:2px;transform:translateX(-50%)}
+
+/* ---- чаты ---- */
+.clist{display:flex;flex-direction:column;gap:8px}
+.citem{display:flex;gap:10px;align-items:center;padding:10px;border-radius:14px;background:var(--panel2);text-align:left;width:100%}
+.ava{flex:0 0 46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:#0b101b}
+.cbody{flex:1;min-width:0}
+.cname{font-weight:800;font-size:14px;display:flex;gap:6px;align-items:center}
+.cname .t{font-size:10px;font-weight:700;color:var(--muted);background:#0b101b;padding:1px 6px;border-radius:6px}
+.clast{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cnum{background:var(--red);color:#fff;font-size:12px;font-weight:800;border-radius:10px;padding:2px 7px}
+.citem.closed{opacity:.5}
+
+.chat{display:flex;flex-direction:column;height:100%}
+.chead{display:flex;align-items:center;gap:10px;padding-bottom:10px;border-bottom:1px solid var(--line)}
+.back{font-size:22px;padding:4px 8px}
+.chitem{margin-left:auto;font-size:12px;text-align:right;color:var(--muted)}
+.chitem b{color:var(--accent)}
+.msgs{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:12px 2px}
+.m{max-width:80%;padding:9px 12px;border-radius:16px;font-size:14px;line-height:1.35;animation:mIn .2s}
+@keyframes mIn{from{opacity:0;transform:translateY(6px)}}
+.m.b{align-self:flex-start;background:var(--panel2);border-bottom-left-radius:4px}
+.m.me{align-self:flex-end;background:#2b5bd7;border-bottom-right-radius:4px}
+.m.sys{align-self:center;background:transparent;color:var(--muted);font-size:12px;text-align:center}
+.m.sys.good{color:var(--green);font-weight:800}
+.m.sys.bad{color:var(--red);font-weight:800}
+.typing{align-self:flex-start;color:var(--muted);font-size:13px;padding:4px 10px}
+.typing span{animation:blink 1s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes blink{50%{opacity:.2}}
+.replies{display:flex;flex-wrap:wrap;gap:6px;padding-top:10px;border-top:1px solid var(--line)}
+.replies button{padding:9px 12px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);font-size:13px;font-weight:700}
+.replies button.y{background:var(--accent);color:#1a1400;border:0}
+.replies button.g{background:var(--green);color:#04230f;border:0}
+.replies button.r{color:#ffb3b3}
+.timer{font-size:12px;color:var(--red);font-weight:800}
+
+/* ---- работа ---- */
+.work{text-align:center}
+.pc{font-size:130px;margin:16px auto 6px;display:block;transition:transform .07s;filter:drop-shadow(0 12px 20px rgba(0,0,0,.5));user-select:none}
+.pc:active{transform:scale(.92)}
+.stats{display:flex;justify-content:center;gap:18px;color:var(--muted);font-size:14px;margin-bottom:14px}
+.stats b{color:var(--text)}
+.up{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--panel2);margin-bottom:10px;text-align:left}
+.up .ic{font-size:30px}
+.up .tx{flex:1}
+.up .tx b{display:block}
+.up .tx small{color:var(--muted)}
+.up .btn{white-space:nowrap}
+.float{position:absolute;pointer-events:none;font-weight:900;color:var(--accent);font-size:20px;animation:fl .8s ease-out forwards;z-index:30;text-shadow:0 2px 6px #000}
+@keyframes fl{to{transform:translateY(-70px);opacity:0}}
+
+/* ---- профиль ---- */
+.prof{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat{background:var(--panel2);border-radius:14px;padding:12px}
+.stat small{color:var(--muted);font-size:12px}
+.stat b{display:block;font-size:17px;margin-top:2px}
+.rank{background:linear-gradient(135deg,#2b3a66,#1f2840);border-radius:16px;padding:14px;margin-bottom:12px;display:flex;align-items:center;gap:12px}
+.rank .e{font-size:40px}
+.rank .clast{white-space:normal}
+.progress{height:8px;border-radius:4px;background:#0b101b;margin-top:6px;overflow:hidden}
+.progress i{display:block;height:100%;background:var(--accent)}
+.coll .item.unk{filter:grayscale(1) brightness(.35)}
+.coll .item .cnt{position:absolute;top:5px;left:7px;font-size:10px;color:var(--muted)}
+
+.toast{position:absolute;left:50%;top:62px;transform:translateX(-50%);background:#24304d;border:1px solid var(--line);padding:10px 14px;border-radius:14px;font-size:13px;z-index:40;box-shadow:0 10px 30px rgba(0,0,0,.4);animation:tIn .25s;max-width:90%;cursor:pointer}
+@keyframes tIn{from{opacity:0;transform:translate(-50%,-10px)}}
+
+/* ---- v1.1 ---- */
+.event{padding:8px 14px;font-size:12px;line-height:1.4;background:linear-gradient(90deg,#3a2a00,#2a1f40);color:#ffe9a6;border-bottom:1px solid var(--line)}
+.event b{color:#fff}
+.confetti{position:absolute;inset:0;pointer-events:none;z-index:60}
+.achs{display:flex;flex-direction:column;gap:8px;margin-bottom:18px}
+.ach{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:12px;padding:8px 10px;opacity:.55}
+.ach.got{opacity:1;background:linear-gradient(90deg,#24402c,var(--panel2))}
+.ach .e{font-size:24px}.ach .tx{flex:1;min-width:0}.ach .tx b{display:block;font-size:14px}.ach .tx small{color:var(--muted);font-size:12px}
+.ach .rw{font-size:12px;font-weight:800;color:var(--accent);white-space:nowrap}
+.up-row{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:8px 0}
+.up-it{flex:0 0 92px;background:var(--panel2);border-radius:14px;padding:8px 4px;border-bottom:4px solid var(--rc);display:flex;flex-direction:column;align-items:center;gap:2px}
+.up-it .e{font-size:38px}.up-it small{font-size:11px;line-height:1.1;color:#cfd7e8}.up-it b{font-size:12px;color:var(--accent)}
+.gauge{position:relative;width:140px;height:140px;flex:0 0 140px}
+.gauge svg{width:100%;height:100%;transform:rotate(-90deg)}
+.g-bg{fill:none;stroke:#3a1d24;stroke-width:16}
+.g-win{fill:none;stroke:#33d17a;stroke-width:16;transition:stroke-dasharray .3s}
+.arrow{position:absolute;left:50%;top:50%;width:4px;height:62px;margin-left:-2px;margin-top:-62px;background:#fff;border-radius:2px;transform-origin:50% 100%;box-shadow:0 0 8px #fff}
+.g-pct{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;font-size:20px;pointer-events:none}
+.mults{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.mults button{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:8px 0;font-weight:900;display:flex;flex-direction:column;align-items:center}
+.mults button small{font-size:11px;color:var(--muted);font-weight:700}
+.mults button.on{background:var(--accent);color:#1a1400}.mults button.on small{color:#4a3a00}
+.mults button:disabled{opacity:.35}
+.news{text-align:left;line-height:1.7;font-size:14px;margin-top:10px;background:var(--panel2);border-radius:14px;padding:12px}
+.nav button{font-size:10px}
+.invite{display:flex;gap:12px;align-items:center;background:linear-gradient(135deg,#3a2a6b,#1f2840);border-radius:16px;padding:12px;margin-bottom:10px}
+.invite .e{font-size:34px}.invite .tx b{display:block}.invite .tx small{color:var(--muted);font-size:12px}
+.toplist{display:flex;flex-direction:column;gap:6px}
+.trow{display:flex;align-items:center;gap:10px;background:var(--panel2);border-radius:12px;padding:10px 12px}
+.trow.me{background:linear-gradient(90deg,#4a3a00,var(--panel2));border:1px solid var(--accent)}
+.trow .md{width:30px;text-align:center;font-size:20px}.trow .pl{font-size:14px;color:var(--muted);font-weight:800}
+.trow .nm{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.trow .sc{font-weight:900;color:var(--accent)}
+.btn.ad{background:linear-gradient(90deg,#7a3cff,#3d8bfd);color:#fff;border:0}
+body{-webkit-user-select:none;user-select:none}
+
+/* ---- широкий экран (ПК) ---- */
+@media (min-width:900px){
+  .app{max-width:1100px}
+  .cases{grid-template-columns:repeat(4,1fr)}
+  .grid{grid-template-columns:repeat(6,1fr)}
+  .prof{grid-template-columns:repeat(3,1fr)}
+  .modal{max-width:560px}
+  .chat .msgs{padding:12px 8%}
+  .work .up{max-width:640px;margin-left:auto;margin-right:auto}
+  .toplist,.invite{max-width:760px;margin-left:auto;margin-right:auto}
+  .screen{padding:18px 28px}
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="top">
+    <div class="logo">ПЕРЕКУП</div>
+    <button class="gift" id="gift" title="Ежедневный подарок">🎁</button>
+    <button class="gift" id="snd" title="Звук">🔊</button>
+    <div class="money"><span id="money">0</span><span class="cur">₽</span></div>
+  </div>
+  <div class="event" id="event" style="display:none"></div>
+  <div class="screen" id="screen"></div>
+  <nav class="nav" id="nav">
+    <button data-s="cases"><span class="i">📦</span>Кейсы</button>
+    <button data-s="inv"><span class="i">🎒</span>Вещи</button>
+    <button data-s="chats"><span class="i">💬</span>Чаты</button>
+    <button data-s="work"><span class="i">💻</span>Работа</button>
+    <button data-s="rating"><span class="i">🏆</span>Топ</button>
+    <button data-s="profile"><span class="i">👤</span>Профиль</button>
+  </nav>
+</div>
+<script>
+// ===== ДАННЫЕ ИГРЫ =====
+// редкости: c — обычный, u — необычный, r — редкий, e — эпический, l — легендарный, m — мифический
+const RARITY = {
+  c: { name: "Обычный",     color: "#9aa4b2", w: 55 },
+  u: { name: "Необычный",   color: "#4caf6a", w: 27 },
+  r: { name: "Редкий",      color: "#3d8bfd", w: 12 },
+  e: { name: "Эпический",   color: "#a259ff", w: 4.5 },
+  l: { name: "Легендарный", color: "#ff9f1a", w: 1.3 },
+  m: { name: "Мифический",  color: "#ff3b5c", w: 0.2 },
+};
+
+// [id, эмодзи, название, цена, редкость]
+const ITEMS_RAW = [
+  // школьный
+  ["pen","🖊️","Шариковая ручка",15,"c"],["eraser","🧽","Ластик",10,"c"],["notebook","📓","Тетрадь в клетку",40,"c"],
+  ["ruler","📏","Линейка",25,"c"],["gum","🍬","Жвачка",30,"c"],["pencilcase","👝","Пенал",250,"u"],
+  ["calc","🧮","Калькулятор",400,"u"],["wiredph","🎧","Проводные наушники",600,"u"],["backpack","🎒","Рюкзак",1200,"r"],
+  ["kidtab","📲","Детский планшет",4000,"e"],["oldphone","📱","Смартфон б/у",9000,"l"],["oldlaptop","💻","Старый ноутбук",25000,"m"],
+  // уличный
+  ["socks","🧦","Носки с приколом",200,"c"],["shawarma","🌯","Шаурма",250,"c"],["cap","🧢","Кепка",500,"c"],
+  ["tshirt","👕","Футболка",900,"c"],["powerbank","🔋","Пауэрбанк",1500,"u"],["speaker","🔊","Колонка",2500,"u"],
+  ["hoodie","🧥","Худи оверсайз",3000,"u"],["scooter","🛴","Самокат",6000,"r"],["sneakers","👟","Кроссовки",7000,"r"],
+  ["smartwatch","⌚","Смарт-часы",12000,"e"],["bike","🚲","Велосипед",25000,"l"],["moped","🛵","Мопед",60000,"m"],
+  // геймерский
+  ["mousepad","🟫","Игровой коврик",800,"c"],["mouse","🖱️","Игровая мышка",1500,"c"],["keyboard","⌨️","Механическая клавиатура",3500,"u"],
+  ["headset","🎙️","Гарнитура",4500,"u"],["gamepad","🎮","Геймпад",5000,"u"],["chair","🪑","Игровое кресло",15000,"r"],
+  ["monitor","🖥️","Монитор 165 Гц",20000,"r"],["console","🕹️","Игровая приставка",45000,"e"],["gpu","📟","Видеокарта",80000,"l"],
+  ["gamingpc","🧰","Игровой ПК",250000,"m"],
+  // техника
+  ["band","📿","Фитнес-браслет",3000,"c"],["buds","🎵","Беспроводные наушники",8000,"c"],["tablet","📱","Планшет",30000,"u"],
+  ["phone","📱","Смартфон",45000,"u"],["camera","📷","Фотоаппарат",70000,"r"],["vr","🥽","VR-шлем",90000,"r"],
+  ["laptop","💻","Ноутбук",100000,"r"],["drone","🚁","Дрон",120000,"e"],["flagship","📱","Флагманский смартфон",150000,"e"],
+  ["ultrabook","💻","Ультрабук Про",220000,"l"],["robodog","🐕","Робот-пёс",900000,"m"],
+  // люкс
+  ["perfume","🧴","Духи",12000,"c"],["glasses","🕶️","Очки",25000,"c"],["bag","👜","Дизайнерская сумка",90000,"u"],
+  ["ring","💍","Золотое кольцо",150000,"u"],["fur","🧥","Шуба",300000,"r"],["watch","⌚","Швейцарские часы",400000,"r"],
+  ["diamond","💎","Бриллиант",1500000,"e"],["painting","🖼️","Картина",2500000,"l"],["goldbar","🥇","Золотой слиток",6000000,"m"],
+  // гараж
+  ["lada","🚗","Жигули",180000,"c"],["moto","🏍️","Мотоцикл",450000,"c"],["usedcar","🚙","Иномарка б/у",900000,"u"],
+  ["suv","🚙","Внедорожник",3500000,"r"],["retro","🚘","Ретро-кабриолет",6000000,"e"],["sportscar","🏎️","Спорткар",9000000,"e"],
+  ["hypercar","🏎️","Гиперкар",40000000,"l"],["bolide","🏁","Гоночный болид",80000000,"m"],
+  // олигарх
+  ["boat","🚤","Катер",8000000,"c"],["flat","🏢","Квартира в центре",12000000,"c"],["heli","🚁","Вертолёт",60000000,"u"],
+  ["villa","🏡","Вилла у моря",150000000,"r"],["yacht","🛥️","Яхта",300000000,"e"],["jet","🛩️","Частный самолёт",700000000,"l"],
+  ["island","🏝️","Собственный остров",2000000000,"m"],
+];
+const ITEMS = {};
+ITEMS_RAW.forEach(([id, e, n, p, r]) => ITEMS[id] = { id, emoji: e, name: n, price: p, rarity: r });
+
+const CASES = [
+  { id: "school", name: "Школьный",  emoji: "🎒", color: "#4caf6a", price: 650,
+    items: ["pen","eraser","notebook","ruler","gum","pencilcase","calc","wiredph","backpack","kidtab","oldphone","oldlaptop"] },
+  { id: "street", name: "Уличный",   emoji: "🧢", color: "#3d8bfd", price: 2800,
+    items: ["socks","shawarma","cap","tshirt","powerbank","speaker","hoodie","scooter","sneakers","smartwatch","bike","moped"] },
+  { id: "gamer",  name: "Геймерский",emoji: "🎮", color: "#a259ff", price: 7900,
+    items: ["mousepad","mouse","keyboard","headset","gamepad","chair","monitor","console","gpu","gamingpc"] },
+  { id: "tech",   name: "Техно",     emoji: "📱", color: "#00b8d9", price: 36000,
+    items: ["band","buds","tablet","phone","camera","vr","laptop","drone","flagship","ultrabook","robodog"] },
+  { id: "lux",    name: "Люкс",      emoji: "💎", color: "#ff9f1a", price: 210000,
+    items: ["perfume","glasses","bag","ring","fur","watch","diamond","painting","goldbar"] },
+  { id: "garage", name: "Гараж",     emoji: "🚗", color: "#e5484d", price: 1950000,
+    items: ["lada","moto","usedcar","suv","retro","sportscar","hypercar","bolide"] },
+  { id: "oligarch", name: "Олигарх", emoji: "👑", color: "#ffd23f", price: 70000000,
+    items: ["boat","flat","heli","villa","yacht","jet","island"] },
+];
+
+if (typeof module !== "undefined") module.exports = { RARITY, ITEMS, CASES };
+
+</script>
+<script>
+const BUILD = "vk";   // "web" (сайт + Telegram) или "yandex"
+// ===== ПЕРЕКУП: логика игры =====
+const SAVE_KEY = "perekup_save_v1";
+const $ = s => document.querySelector(s);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const fmt = n => Math.round(n).toLocaleString("ru-RU");
+const short = n => n >= 1e9 ? (n / 1e9).toFixed(n >= 1e10 ? 0 : 1).replace(".0", "") + " млрд"
+  : n >= 1e6 ? (n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(".0", "") + " млн"
+  : n >= 1e4 ? Math.round(n / 1e3) + " тыс" : fmt(n);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// ---------- состояние ----------
+function freshState() {
+  return {
+    money: 1000, uid: 1, inv: [], found: {},
+    work: { click: 0, passive: 0 },
+    gift: { last: 0, streak: 0 },
+    stats: { opened: 0, sold: 0, earned: 0, best: null, scammed: 0 },
+    fast: false, sound: true, ach: {}, seen: "",
+  };
+}
+let S = freshState();
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s.money === "number") S = Object.assign(freshState(), s); } catch (e) {}
+const save = () => { S.ts = Date.now(); try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} if (typeof cloudSave === "function") cloudSave(); if (typeof ySave === "function") ySave(); if (typeof vkSave === "function") vkSave(); };
+
+let screen = "cases", invTab = "all", openChatId = null;
+let chats = [];          // чаты не сохраняются — после перезахода придут новые покупатели
+let chatSeq = 1;
+
+// ---------- деньги ----------
+function addMoney(n) { S.money += n; renderTop(); }
+function renderTop() {
+  $("#money").textContent = fmt(S.money);
+  $("#gift").classList.toggle("ready", giftReady());
+  const unread = chats.reduce((s, c) => s + (c.closed ? 0 : c.unread), 0);
+  const btn = document.querySelector('.nav [data-s="chats"]');
+  let b = btn.querySelector(".badge");
+  if (unread > 0) { if (!b) { b = document.createElement("span"); b.className = "badge"; btn.appendChild(b); } b.textContent = unread; }
+  else if (b) b.remove();
+}
+
+function toast(text, onClick) {
+  document.querySelectorAll(".toast").forEach(t => t.remove());
+  const t = document.createElement("div");
+  t.className = "toast"; t.innerHTML = text;
+  if (onClick) t.onclick = () => { t.remove(); onClick(); };
+  $("#app").appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+// ---------- навигация ----------
+document.querySelectorAll(".nav button").forEach(b => b.onclick = () => go(b.dataset.s));
+function go(s) { screen = s; if (s !== "chats") openChatId = null; render(); }
+function render() {
+  $("#screen").style.overflowY = "";
+  document.querySelectorAll(".nav button").forEach(b => b.classList.toggle("on", b.dataset.s === screen));
+  ({ cases: renderCases, inv: renderInv, chats: renderChats, work: renderWork, rating: renderRating, profile: renderProfile })[screen]();
+  renderTop();
+}
+
+// ---------- кейсы ----------
+function caseRange(c) {
+  const ps = c.items.map(id => ITEMS[id].price);
+  return short(Math.min(...ps)) + " – " + short(Math.max(...ps)) + " ₽";
+}
+function renderCases() {
+  $("#screen").innerHTML = `
+    <h2>Кейсы</h2><div class="sub">Открывай кейсы и продавай находки дороже!</div>
+    <div class="cases">${CASES.map(c => `
+      <button class="case ${S.money < c.price ? "locked" : ""}" style="--c:${c.color}" data-c="${c.id}">
+        <div class="big">${c.emoji}</div><div class="nm">${c.name}</div>
+        <div class="range">${caseRange(c)}</div>
+        <div class="pr">${short(c.price)} ₽</div>
+      </button>`).join("")}
+    </div>
+    <label class="toggle"><input type="checkbox" id="fast" ${S.fast ? "checked" : ""}> Быстрое открытие</label>`;
+  document.querySelectorAll(".case").forEach(b => b.onclick = () => openCase(CASES.find(c => c.id === b.dataset.c)));
+  $("#fast").onchange = e => { S.fast = e.target.checked; save(); };
+}
+
+function rollItem(c) {
+  const by = {};
+  c.items.forEach(id => (by[ITEMS[id].rarity] = by[ITEMS[id].rarity] || []).push(id));
+  const rs = Object.keys(by);
+  const total = rs.reduce((s, r) => s + RARITY[r].w, 0);
+  let x = Math.random() * total;
+  for (const r of rs) { x -= RARITY[r].w; if (x <= 0) return pick(by[r]); }
+  return pick(by[rs[0]]);
+}
+
+function cardHTML(it) {
+  return `<div class="rcard" style="--rc:${RARITY[it.rarity].color}"><div class="e">${it.emoji}</div><div class="n">${esc(it.name)}</div></div>`;
+}
+
+function openCase(c) {
+  if (S.money < c.price) { toast(`Не хватает денег. Заработай на вкладке «Работа» 💻`); return; }
+  addMoney(-c.price);
+  S.stats.opened++;
+  if (typeof maybeInterstitial === "function") maybeInterstitial();
+  const win = rollItem(c);
+  const ov = document.createElement("div");
+  ov.className = "overlay";
+  if (S.fast) { $("#app").appendChild(ov); showDrop(ov, c, win); return; }
+
+  const N = 60, WIN = 52;
+  const cards = [];
+  for (let i = 0; i < N; i++) cards.push(ITEMS[i === WIN ? win : rollItem(c)]);
+  ov.innerHTML = `<div class="modal"><h2>${c.emoji} ${c.name}</h2>
+    <div class="roulette"><div class="pointer"></div><div class="strip">${cards.map(cardHTML).join("")}</div></div>
+    <button class="btn" id="skip">Пропустить</button></div>`;
+  $("#app").appendChild(ov);
+  const strip = ov.querySelector(".strip"), box = ov.querySelector(".roulette");
+  const step = 118, target = WIN * step + 55 - box.clientWidth / 2 + rnd(-40, 40);
+  strip.style.transform = "translateX(0)";
+  let done = false;
+  const finish = () => { if (done) return; done = true; showDrop(ov, c, win); };
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    strip.style.transition = "transform 4.6s cubic-bezier(.08,.6,.12,1)";
+    strip.style.transform = `translateX(${-target}px)`;
+    let last = -1;
+    const tick = () => {
+      if (done || !ov.isConnected) return;
+      const x = new DOMMatrixReadOnly(getComputedStyle(strip).transform).m41;
+      const idx = Math.floor((-x + box.clientWidth / 2) / step);
+      if (idx !== last) { if (last >= 0) snd("tick"); last = idx; }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }));
+  strip.addEventListener("transitionend", () => setTimeout(finish, 350));
+  ov.querySelector("#skip").onclick = finish;
+}
+
+function addItem(id) {
+  const uid = S.uid++;
+  S.inv.push({ uid, id, status: "inv", price: 0 });
+  S.found[id] = (S.found[id] || 0) + 1;
+  const it = ITEMS[id];
+  if (!S.stats.best || it.price > ITEMS[S.stats.best].price) S.stats.best = id;
+  return uid;
+}
+
+function showDrop(ov, c, id) {
+  const it = ITEMS[id], rc = RARITY[it.rarity];
+  const isNew = !S.found[id];
+  const uid = addItem(id);
+  save();
+  snd("drop_" + it.rarity);
+  if ("elm".includes(it.rarity)) confetti(it.rarity === "e" ? 70 : 160, [rc.color, "#ffd23f", "#ffffff"]);
+  const quick = Math.round(it.price * 0.7);
+  ov.innerHTML = `<div class="modal" style="--rc:${rc.color}">
+    <div class="rar">${rc.name}</div>${isNew ? ` <div class="rar" style="--rc:#33d17a">Новое в коллекции!</div>` : ""}
+    <div class="drop">${it.emoji}</div>
+    <div class="iname">${esc(it.name)}</div>
+    <div class="iprice">Рыночная цена ≈ <b>${fmt(it.price)} ₽</b> · кейс стоил ${fmt(c.price)} ₽</div>
+    <div class="btns">
+      <button class="btn y" id="sell">💬 Выставить на продажу</button>
+      <div class="row2">
+        <button class="btn" id="keep">🎒 Оставить</button>
+        <button class="btn" id="quick">⚡ Скупщику ${short(quick)} ₽</button>
+      </div>
+      <div class="row2">
+        <button class="btn" id="upg">⬆️ Апгрейд</button>
+        <button class="btn g" id="again" ${S.money < c.price ? "disabled" : ""}>Ещё раз (${short(c.price)} ₽)</button>
+      </div>
+    </div></div>`;
+  ov.querySelector("#upg").onclick = () => { ov.remove(); upgradeDialog(uid); };
+  ov.querySelector("#keep").onclick = () => { ov.remove(); render(); };
+  ov.querySelector("#quick").onclick = () => { quickSell(uid); ov.remove(); render(); };
+  if (adsOn()) {
+    const b = document.createElement("button");
+    b.className = "btn ad"; b.textContent = `📺 Скупщику ×2 за рекламу: ${short(it.price * 1.4)} ₽`;
+    ov.querySelector(".btns").prepend(b);
+    b.onclick = () => showRewarded(() => {
+      if (!S.inv.find(x => x.uid === uid)) return;
+      removeItem(uid); const sum = Math.round(it.price * 1.4);
+      addMoney(sum); S.stats.earned += sum; save(); snd("coin");
+      toast(`📺 Скупщик заплатил ×2: +${fmt(sum)} ₽`); ov.remove(); render();
+    });
+  }
+  ov.querySelector("#sell").onclick = () => { ov.remove(); sellDialog(uid); };
+  ov.querySelector("#again").onclick = () => { ov.remove(); render(); openCase(c); };
+}
+
+// ---------- инвентарь и продажа ----------
+function quickSell(uid) {
+  const e = S.inv.find(x => x.uid === uid); if (!e) return;
+  const sum = Math.round(ITEMS[e.id].price * 0.7);
+  removeItem(uid);
+  addMoney(sum); S.stats.earned += sum; save();
+  toast(`⚡ Скупщик забрал ${esc(ITEMS[e.id].name)} за ${fmt(sum)} ₽`);
+}
+function removeItem(uid, except) {
+  S.inv = S.inv.filter(x => x.uid !== uid);
+  chats.forEach(c => { if (c.uid === uid && !c.closed && c !== except) { c.closed = true; c.replies = []; c.deadline = 0; sys(c, "Товар уже продан", "bad"); } });
+}
+
+function renderInv() {
+  const list = S.inv.filter(e => invTab === "all" || (invTab === "listed" ? e.status === "listed" : e.status === "inv"));
+  list.sort((a, b) => ITEMS[b.id].price - ITEMS[a.id].price);
+  const total = S.inv.reduce((s, e) => s + ITEMS[e.id].price, 0);
+  $("#screen").innerHTML = `
+    <h2>Мои вещи</h2><div class="sub">${S.inv.length} шт. · примерно на ${short(total)} ₽</div>
+    <div class="tabs">
+      <button data-t="all" class="${invTab === "all" ? "on" : ""}">Все</button>
+      <button data-t="inv" class="${invTab === "inv" ? "on" : ""}">Не продаются</button>
+      <button data-t="listed" class="${invTab === "listed" ? "on" : ""}">На продаже</button>
+    </div>
+    ${list.length ? `<div class="grid">${list.map(e => {
+      const it = ITEMS[e.id];
+      return `<button class="item" style="--rc:${RARITY[it.rarity].color}" data-u="${e.uid}">
+        ${e.status === "listed" ? `<span class="tag">${short(e.price)}</span>` : ""}
+        <div class="e">${it.emoji}</div><div class="n">${esc(it.name)}</div><div class="p">≈ ${short(it.price)} ₽</div></button>`;
+    }).join("")}</div>` : `<div class="empty">Тут пока пусто.<br>Открой кейс на вкладке «Кейсы» 📦</div>`}`;
+  document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => { invTab = b.dataset.t; renderInv(); });
+  document.querySelectorAll(".item").forEach(b => b.onclick = () => sellDialog(+b.dataset.u));
+}
+
+function priceHint(ratio) {
+  if (ratio < 0.85) return ["Дёшево — купят быстро, но ты теряешь деньги", "#33d17a"];
+  if (ratio <= 1.1) return ["По рынку — нормальная цена", "#ffd23f"];
+  if (ratio <= 1.35) return ["Дороговато — придётся торговаться", "#ff9f1a"];
+  return ["Очень дорого — многие уйдут", "#ff5c5c"];
+}
+
+function sellDialog(uid) {
+  const e = S.inv.find(x => x.uid === uid); if (!e) return;
+  const it = ITEMS[e.id], rc = RARITY[it.rarity];
+  const min = Math.max(1, Math.round(it.price * 0.5)), max = Math.round(it.price * 2);
+  let price = e.status === "listed" ? e.price : Math.round(it.price * 1.1);
+  const ov = document.createElement("div");
+  ov.className = "overlay";
+  ov.innerHTML = `<div class="modal" style="--rc:${rc.color}">
+    <div class="rar">${rc.name}</div>
+    <div class="drop" style="font-size:64px">${it.emoji}</div>
+    <div class="iname">${esc(it.name)}</div>
+    <div class="iprice">Рыночная цена ≈ ${fmt(it.price)} ₽</div>
+    <div class="pricebig" id="pv"></div>
+    <input class="slider" id="sl" type="range" min="0" max="1000" step="1">
+    <div class="bar" id="bar"><i id="mk"></i></div>
+    <div class="hint" id="hint"></div>
+    <div class="btns">
+      <button class="btn y" id="list">${e.status === "listed" ? "Обновить цену" : "Выставить на продажу"}</button>
+      <div class="row2">
+        ${e.status === "listed" ? `<button class="btn r" id="unlist">Снять с продажи</button>` : `<button class="btn" id="quick">⚡ Скупщику ${short(it.price * 0.7)} ₽</button>`}
+        <button class="btn" id="close">Закрыть</button>
+      </div>
+      <button class="btn" id="upg">⬆️ Апгрейд — рискни и получи вещь дороже</button>
+    </div></div>`;
+  $("#app").appendChild(ov);
+  ov.querySelector("#upg").onclick = () => { ov.remove(); upgradeDialog(uid); };
+  const sl = ov.querySelector("#sl");
+  const toSl = p => Math.round((Math.log(p) - Math.log(min)) / (Math.log(max) - Math.log(min)) * 1000);
+  const fromSl = v => { const p = Math.exp(Math.log(min) + v / 1000 * (Math.log(max) - Math.log(min))); return niceRound(p); };
+  const upd = () => {
+    ov.querySelector("#pv").textContent = fmt(price) + " ₽";
+    const [t, col] = priceHint(price / it.price);
+    ov.querySelector("#hint").textContent = t; ov.querySelector("#hint").style.color = col;
+    ov.querySelector("#mk").style.left = (sl.value / 10) + "%";
+  };
+  sl.value = toSl(price); upd();
+  sl.oninput = () => { price = fromSl(+sl.value); upd(); };
+  ov.querySelector("#bar").onclick = ev => {
+    const r = ev.currentTarget.getBoundingClientRect();
+    sl.value = Math.round((ev.clientX - r.left) / r.width * 1000); price = fromSl(+sl.value); upd();
+  };
+  ov.querySelector("#close").onclick = () => { ov.remove(); render(); };
+  ov.querySelector("#list").onclick = () => {
+    e.status = "listed"; e.price = price; save(); ov.remove();
+    chats.forEach(c => { if (c.uid === uid && !c.closed) sys(c, `Цена изменена: ${fmt(price)} ₽`); });
+    toast(`📢 ${esc(it.name)} выставлен за ${fmt(price)} ₽. Жди сообщений в «Чатах»!`);
+    scheduleBuyer(rnd(2500, 5000));
+    render();
+  };
+  const q = ov.querySelector("#quick"); if (q) q.onclick = () => { quickSell(uid); ov.remove(); render(); };
+  const u = ov.querySelector("#unlist"); if (u) u.onclick = () => {
+    e.status = "inv"; save(); ov.remove();
+    chats.forEach(c => { if (c.uid === uid && !c.closed) { c.closed = true; sys(c, "Ты снял товар с продажи", "bad"); } });
+    render();
+  };
+}
+function niceRound(p) {
+  if (p < 100) return Math.round(p);
+  const mag = Math.pow(10, Math.floor(Math.log10(p)) - 1);
+  return Math.round(p / mag) * mag;
+}
+
+// ---------- покупатели и чаты ----------
+const NAMES = ["Артём","Денис","Ксюша","Влад","Марина","Игорь","Саня","Катя","Олег","Лиза","Тимур","Даша","Максим","Рома","Настя","Гоша","Вика","Паша","Алина","Дядя Коля","Серёга","Юля","Эльдар","Лёха","Света"];
+const AVAS = ["🧑","👩","🧔","👨‍🦱","👱‍♀️","🧑‍🦰","👦","👧","🧓","🤠","😎","🧑‍💼","👩‍🎤","🧑‍🔧","🥸"];
+const TYPES = {
+  normal:    { label: "Обычный",       w: 34, mx: [0.9, 1.25] },
+  chatty:    { label: "Болтун",        w: 18, mx: [0.95, 1.3] },
+  impatient: { label: "Нетерпеливый",  w: 16, mx: [0.9, 1.2], patience: 22 },
+  thrifty:   { label: "Экономный",     w: 16, mx: [0.75, 1.05] },
+  scammer:   { label: "Хитрый",        w: 8,  mx: [0.9, 1.2] },
+  troll:     { label: "Тролль",        w: 8,  mx: [0, 0] },
+  granny:    { label: "Бабушка",       w: 6,  mx: [1.05, 1.45] },
+  blogger:   { label: "Блогер",        w: 5,  mx: [0.5, 0.65] },
+  reseller:  { label: "Перекупщик",    w: 7,  mx: [0.55, 0.75] },
+};
+function pickType() {
+  const w = k => TYPES[k].w * (EV && EV.scam && k === "scammer" ? 4 : 1);
+  const tot = Object.keys(TYPES).reduce((s, k) => s + w(k), 0);
+  let x = Math.random() * tot;
+  for (const k in TYPES) { x -= w(k); if (x <= 0) return k; }
+  return "normal";
+}
+
+let buyerTimer = null;
+function scheduleBuyer(ms) {
+  if (buyerTimer) return;
+  buyerTimer = setTimeout(() => { buyerTimer = null; spawnBuyer(); scheduleBuyer(rnd(7000, 15000) / buyerSpeed()); }, ms);
+}
+function spawnBuyer() {
+  const listed = S.inv.filter(e => e.status === "listed");
+  const active = chats.filter(c => !c.closed).length;
+  if (!listed.length || active >= 6) return;
+  const e = pick(listed), it = ITEMS[e.id];
+  const type = pickType(), T = TYPES[type];
+  const c = {
+    id: chatSeq++, uid: e.uid, itemId: e.id, type,
+    name: pick(NAMES), ava: pick(AVAS),
+    max: Math.round(it.price * rnd(T.mx[0], T.mx[1]) * eventMult(e.id)),
+    msgs: [], replies: [], unread: 0, closed: false, typing: false,
+    offer: 0, tries: 0, told: false, trollN: 0, deadline: 0,
+  };
+  chats.unshift(c);
+  const first = {
+    normal: [`Здравствуйте! «${it.name}» ещё актуально?`, `Добрый день, «${it.name}» ещё продаёте?`],
+    chatty: [`Приветик!! 😊 Увидел(а) ваше объявление про «${it.name}» — просто класс! Ещё в продаже?`, `Здравствуйте-здравствуйте! Давно ищу такое, расскажите, ещё в продаже?`],
+    impatient: [`«${it.name}» есть? Быстро отвечайте`, `Актуально? Мне срочно`],
+    thrifty: [`Здравствуйте. «${it.name}» ещё продаёте? Цена какая окончательная?`, `Добрый. Торг уместен?`],
+    scammer: [`Здравствуйте!! Мне очень нужно «${it.name}» 🙏 Продаёте?`, `Привет, бро. Товар ещё есть?`],
+    troll: [`а чё так дорого 🤡`, `привет. а это ворованное?`, `ну и цена конечно хаха`],
+    granny: [`Здравствуй, внучок! Это ты «${it.name}» продаёшь? Я в этих ваших интернетах не очень 👵`, `Алло! Ой, то есть здравствуйте. «${it.name}» ещё есть?`],
+    blogger: [`Йоу! Я блогер, 120к подписчиков 😎 «${it.name}» ещё актуально?`, `Привет! Снимаю обзоры, для ролика нужно «${it.name}». Есть?`],
+    reseller: [`«${it.name}». Заберу сразу, наличка на руках. Актуально?`, `Здрасте. Беру оптом и быстро. Актуально?`],
+  }[type];
+  if (type === "granny") c.name = pick(["Баба Валя", "Баба Нина", "Тамара Петровна", "Бабуля Галя"]), c.ava = "👵";
+  if (type === "blogger") c.ava = pick(["🤳", "📸", "🎬"]);
+  if (type === "reseller") c.ava = "🕴️";
+  snd("msg");
+  buyerSay(c, pick(first), 300, () => setReplies(c, [
+    { t: "Да, продаётся!", k: "yes", cls: "y" },
+    { t: "Нет, уже продано", k: "no", cls: "r" },
+  ]));
+  if (openChatId === null) toast(`💬 <b>${esc(c.name)}</b> пишет про «${esc(it.name)}»`, () => { screen = "chats"; openChatId = c.id; render(); });
+  if (screen === "chats") render(); else renderTop();
+}
+
+function chatItemPrice(c) { const e = S.inv.find(x => x.uid === c.uid); return e ? e.price : 0; }
+
+function buyerSay(c, text, delay, then) {
+  c.typing = true; c.replies = [];
+  refreshChat(c);
+  setTimeout(() => {
+    if (c.closed && !c.allowAfterClose) { c.typing = false; refreshChat(c); return; }
+    c.typing = false;
+    c.msgs.push({ f: "b", t: text });
+    if (openChatId !== c.id || screen !== "chats") c.unread++;
+    if (TYPES[c.type].patience && !c.closed) c.deadline = Date.now() + TYPES[c.type].patience * 1000;
+    if (then) then();
+    refreshChat(c);
+  }, delay ?? rnd(900, 2200));
+}
+function sys(c, text, cls = "") { c.msgs.push({ f: "sys", t: text, cls }); refreshChat(c); }
+function setReplies(c, r) { c.replies = r; refreshChat(c); }
+function closeChat(c) { c.closed = true; c.replies = []; c.deadline = 0; refreshChat(c); }
+
+function refreshChat(c) {
+  if (screen === "chats") {
+    if (openChatId === c.id) { c.unread = 0; renderChatView(c, true); }
+    else if (openChatId === null) renderChats();
+  }
+  renderTop();
+}
+
+function reply(c, k) {
+  const r = c.replies.find(x => x.k === k); if (!r) return;
+  c.msgs.push({ f: "me", t: r.say || r.t }); c.replies = []; c.deadline = 0;
+  const it = ITEMS[c.itemId], price = chatItemPrice(c);
+  if (!S.inv.find(x => x.uid === c.uid)) { sys(c, "Товара уже нет", "bad"); closeChat(c); return; }
+
+  if (k === "no" || k === "bye" || k === "block") {
+    closeChat(c);
+    if (k === "block") { sys(c, "Ты заблокировал пользователя 🚫"); S.stats.blocked = (S.stats.blocked || 0) + 1; }
+    return;
+  }
+  if (c.type === "troll") return trollStep(c);
+
+  if (k === "yes") {
+    if (c.type === "scammer") {
+      return buyerSay(c, pick([
+        `Отлично! Давайте вы сначала отправите, а я сразу переведу, честно-честно 😇`,
+        `Беру за ${fmt(price)}! Только скиньте товар сначала, у меня карта заблокирована, оплачу завтра`,
+      ]), null, () => setReplies(c, [
+        { t: "Хорошо, отправляю", k: "scam_yes" },
+        { t: "Только предоплата!", k: "scam_no", cls: "y" },
+        { t: "Пока", k: "bye", cls: "r" },
+      ]));
+    }
+    if (c.type === "granny") {
+      return buyerSay(c, pick([
+        `Ой, хорошо! А не сломается? Я внучку на день рождения беру, он у меня умница, отличник 🥰`,
+        `Батюшки, красота какая! А инструкция есть? Я пенсию как раз получила`,
+      ]), null, () => setReplies(c, [
+        { t: "📝 Рассказать о товаре", k: "tell", cls: "y", say: describeItem(it) },
+        { t: "Не сломается, бабуль!", k: "ask" },
+      ]));
+    }
+    if (c.type === "blogger") {
+      c.offer = niceRound(price * 0.5);
+      return buyerSay(c, `Давай так: отдаёшь за ${fmt(c.offer)} ₽, а я тебя отмечу в ролике. После рекламы к тебе толпа покупателей прибежит, отвечаю 🔥`, null, () => setReplies(c, [
+        { t: `Давай, за ${fmt(c.offer)} ₽ + реклама`, k: "ad", cls: "y" },
+        { t: "Нет, только полная цена", k: "firm" },
+        { t: "Пока", k: "bye", cls: "r" },
+      ]));
+    }
+    if (c.type === "reseller") {
+      c.offer = niceRound(Math.min(price * 0.9, c.max));
+      return buyerSay(c, `${fmt(c.offer)} ₽ и забираю прямо сейчас. Торга нет.`, null, () => setReplies(c, [
+        { t: `Продать за ${fmt(c.offer)} ₽`, k: "accept", cls: "g" },
+        { t: "Нет, мало", k: "bye", cls: "r" },
+      ]));
+    }
+    if (c.type === "chatty") {
+      return buyerSay(c, pick([
+        `Ой, как здорово! А в каком состоянии? Царапины есть? Я для брата беру, у него скоро день рождения 🎂`,
+        `Ура! А откуда это у вас? Расскажите подробнее, мне всё интересно 🙂`,
+      ]), null, () => setReplies(c, [
+        { t: "📝 Рассказать о товаре", k: "tell", cls: "y", say: describeItem(it) },
+        { t: "Будете брать?", k: "ask" },
+      ]));
+    }
+    return decide(c);
+  }
+  if (k === "ad") {
+    adBoostUntil = Date.now() + 120000;
+    toast("📣 Блогер выложил ролик! 2 минуты покупатели пишут в 2,5 раза чаще");
+    return finishSale(c, c.offer);
+  }
+  if (k === "tell") {
+    c.told = true; c.max = Math.round(c.max * (c.type === "chatty" || c.type === "granny" ? 1.15 : 1.07));
+    return buyerSay(c, pick([`Ой, супер! Вы такой приятный продавец 🥰`, `Отлично, звучит убедительно!`]), null, () => decide(c));
+  }
+  if (k === "ask") return decide(c);
+  if (k === "deal") return finishSale(c, price);
+  if (k === "accept") return finishSale(c, c.offer);
+  if (k === "meet") {
+    const mid = niceRound((price + c.offer) / 2);
+    if (mid <= c.max) return buyerSay(c, pick([`Ладно, договорились на ${fmt(mid)} ₽ 🤝`, `Ок, ${fmt(mid)} — беру!`]), null, () => setReplies(c, [{ t: `Продать за ${fmt(mid)} ₽`, k: "sell_mid", cls: "g", v: mid }]));
+    c.tries++;
+    if (c.tries >= 3 || Math.random() < 0.25) return buyerSay(c, `Нет, это дорого для меня. Удачи!`, null, () => closeChat(c));
+    c.offer = niceRound(Math.min(c.max, (c.offer + c.max) / 2 + c.max * 0.03));
+    return buyerSay(c, `Могу максимум ${fmt(c.offer)} ₽`, null, () => counterReplies(c));
+  }
+  if (k === "sell_mid") return finishSale(c, r.v);
+  if (k === "firm") {
+    if (price <= c.max && (c.type !== "thrifty" || Math.random() < 0.65))
+      return buyerSay(c, pick([`Эх, ладно, беру за ${fmt(price)} ₽`, `Хорошо, убедили. Оплачиваю ${fmt(price)} ₽`]), null, () => setReplies(c, [{ t: `Продать за ${fmt(price)} ₽`, k: "deal", cls: "g" }]));
+    if (Math.random() < 0.5) return buyerSay(c, pick([`Тогда не надо, спасибо`, `Понятно. Поищу дешевле`]), null, () => closeChat(c));
+    c.offer = niceRound(Math.min(c.max, c.offer * 1.05));
+    return buyerSay(c, `Последнее предложение — ${fmt(c.offer)} ₽`, null, () => counterReplies(c, true));
+  }
+  if (k === "scam_yes") {
+    removeItem(c.uid, c); S.stats.scammed++; save(); snd("bad");
+    sys(c, "📦 Товар отправлен…");
+    c.allowAfterClose = true;
+    return buyerSay(c, "😏", 1500, () => { sys(c, `❌ Покупатель удалил аккаунт. Это был мошенник! Ты потерял «${it.name}»`, "bad"); closeChat(c); if (screen === "inv") renderInv(); });
+  }
+  if (k === "scam_no") {
+    S.stats.antiscam = (S.stats.antiscam || 0) + 1;
+    if (Math.random() < 0.3) return buyerSay(c, `Эх… ладно, держите ${fmt(price * 0.9)} ₽, больше нет`, null, () => setReplies(c, [
+      { t: `Продать за ${fmt(price * 0.9)} ₽`, k: "sell_mid", cls: "g", v: Math.round(price * 0.9) }, { t: "Нет, пока", k: "bye", cls: "r" }]));
+    return buyerSay(c, pick([`Ну и ладно 🙄`, `Вы мне не доверяете? Обидно. Пока`]), null, () => closeChat(c));
+  }
+}
+
+// описание товара для покупателя — зависит от того, из какого кейса вещь
+const DESC = {
+  school: [["пользовался всего пару раз", "почти как новый", "без царапин и потёртостей"],
+           ["идеально для учёбы", "всё целое, ничего не сломано", "отдаю, потому что купили новый"]],
+  street: [["надевал всего пару раз", "состояние отличное", "без пятен и дырок"],
+           ["стильная вещь, все спрашивают, где взял", "размер универсальный", "отдаю, потому что надоело"]],
+  gamer:  [["проверено в играх — всё работает идеально", "без залипаний и глюков", "внешне как новое"],
+           ["продаю, потому что обновил сетап", "коробка сохранилась", "тянет всё на максималках"]],
+  tech:   [["экран без единой царапины, всегда был в чехле", "батарея держит отлично", "работает без нареканий"],
+           ["полный комплект: коробка, зарядка, документы", "гарантия ещё действует", "не ремонтировался, не вскрывался"]],
+  lux:    [["оригинал, есть все документы и чек", "хранилось в фирменной коробке", "ни разу не использовалось"],
+           ["подарок, просто не мой стиль", "проверено у оценщика", "редкая вещь, такую сейчас не найти"]],
+  garage: [["один владелец, не бит, не крашен", "пробег честный", "техническое обслуживание вовремя"],
+           ["зимняя резина в подарок", "документы в порядке, без долгов и арестов", "заводится с пол-оборота"]],
+  oligarch: [["все документы в полном порядке", "состояние идеальное", "обслуживается профессиональной командой"],
+             ["передам с полным сопровождением сделки", "вид просто шикарный", "таких единицы во всей стране"]],
+};
+function describeItem(it) {
+  const cs = CASES.find(x => x.items.includes(it.id));
+  const [a, b] = DESC[cs ? cs.id : "school"];
+  const end = pick(["Цена честная, за такие деньги лучше не найдёте 👍", "Могу показать фото или видео.", "Брал себе, но деньги сейчас нужнее."]);
+  return `${it.name}: ${pick(a)}, ${pick(b)}. ${end}`;
+}
+
+function decide(c) {
+  const price = chatItemPrice(c);
+  if (price > c.max * 1.7) return buyerSay(c, pick([`Ого, это слишком дорого. Извините`, `Не, за такие деньги не буду`]), null, () => closeChat(c));
+  if (price <= c.max && c.type !== "thrifty")
+    return buyerSay(c, pick([`Отлично, беру за ${fmt(price)} ₽! Куда переводить?`, `Договорились! Перевожу ${fmt(price)} ₽`]), null, () => setReplies(c, [{ t: `Продать за ${fmt(price)} ₽`, k: "deal", cls: "g" }]));
+  const base = c.type === "thrifty" ? 0.8 : 0.9;
+  c.offer = niceRound(Math.min(price * 0.95, c.max * base));
+  buyerSay(c, pick([`А за ${fmt(c.offer)} ₽ отдадите?`, `Давайте за ${fmt(c.offer)} ₽ и забираю сегодня`, `Уступите до ${fmt(c.offer)} ₽?`]), null, () => counterReplies(c));
+}
+function counterReplies(c, last) {
+  const price = chatItemPrice(c);
+  const r = [{ t: `Согласен на ${fmt(c.offer)} ₽`, k: "accept", cls: "g" }];
+  if (!last) r.push({ t: `Давайте за ${fmt(niceRound((price + c.offer) / 2))} ₽`, k: "meet", cls: "y" });
+  if (!last) r.push({ t: "Цена окончательная", k: "firm" });
+  if (!c.told && !last) r.push({ t: "📝 Рассказать о товаре", k: "tell", say: describeItem(ITEMS[c.itemId]) });
+  r.push({ t: "Нет, спасибо", k: "bye", cls: "r" });
+  setReplies(c, r);
+}
+function trollStep(c) {
+  c.trollN++;
+  if (c.trollN >= 3) return buyerSay(c, pick([`лол я просто так спросил 😂 пока`, `ахах ладно, денег всё равно нет`]), null, () => closeChat(c));
+  buyerSay(c, pick([`а если я дам 5 рублей?`, `а можно бесплатно? я же хороший 🥺`, `а он умеет летать?`, `моя бабушка такой за 100 рублей купила`, `а меняю на фантик от конфеты`]), null,
+    () => setReplies(c, [{ t: "Будете брать или нет?", k: "troll" }, { t: "Заблокировать", k: "block", cls: "r" }]));
+}
+
+function finishSale(c, sum) {
+  sum = Math.round(sum);
+  const e = S.inv.find(x => x.uid === c.uid);
+  if (!e) { sys(c, "Товара уже нет", "bad"); return closeChat(c); }
+  removeItem(c.uid, c);
+  c.closed = true;
+  addMoney(sum);
+  S.stats.sold++; S.stats.earned += sum;
+  S.stats.bestMarkup = Math.max(S.stats.bestMarkup || 0, sum / ITEMS[c.itemId].price);
+  snd("coin");
+  const profit = sum - ITEMS[c.itemId].price;
+  save();
+  sys(c, `✅ Продано за ${fmt(sum)} ₽` + (profit > 0 ? ` (+${fmt(profit)} к рынку)` : profit < 0 ? ` (${fmt(profit)} к рынку)` : ""), "good");
+  c.allowAfterClose = true;
+  buyerSay(c, pick([`Спасибо! Всё пришло 👍`, `Супер, спасибо за сделку!`, `Благодарю, удачи!`]), 1200, () => closeChat(c));
+  closeChat(c);
+}
+
+// нетерпеливые покупатели уходят
+setInterval(() => {
+  const now = Date.now();
+  chats.forEach(c => {
+    if (c.deadline && !c.closed && !c.typing && now > c.deadline) {
+      c.deadline = 0; c.replies = [];
+      c.msgs.push({ f: "b", t: pick([`Долго отвечаете. Купил у другого 😤`, `Всё, не надо уже`]) });
+      closeChat(c);
+    }
+  });
+  if (screen === "chats" && openChatId) { const c = chats.find(x => x.id === openChatId); if (c && c.deadline) { const t = document.getElementById("tm"); if (t) t.textContent = `⏳ ${Math.max(0, Math.ceil((c.deadline - now) / 1000))} с`; } }
+}, 500);
+
+function renderChats() {
+  if (openChatId) { const c = chats.find(x => x.id === openChatId); if (c) return renderChatView(c); openChatId = null; }
+  const listed = S.inv.filter(e => e.status === "listed").length;
+  chats = chats.filter((c, i) => !c.closed || i < 25);
+  $("#screen").innerHTML = `<h2>Чаты</h2>
+    <div class="sub">${listed ? `На продаже: ${listed} шт. Покупатели скоро напишут…` : "Выставь вещь на продажу во вкладке «Вещи», и тебе начнут писать покупатели"}</div>
+    ${chats.length ? `<div class="clist">${chats.map(c => {
+      const last = c.typing ? "печатает…" : (c.msgs[c.msgs.length - 1] || {}).t || "";
+      return `<button class="citem ${c.closed ? "closed" : ""}" data-id="${c.id}">
+        <div class="ava">${c.ava}</div>
+        <div class="cbody"><div class="cname">${esc(c.name)} <span class="t">${ITEMS[c.itemId].emoji} ${esc(ITEMS[c.itemId].name)}</span></div>
+        <div class="clast">${esc(last)}</div></div>
+        ${c.unread && !c.closed ? `<span class="cnum">${c.unread}</span>` : ""}</button>`;
+    }).join("")}</div>` : `<div class="empty">Сообщений пока нет 📭</div>`}`;
+  document.querySelectorAll(".citem").forEach(b => b.onclick = () => { openChatId = +b.dataset.id; render(); });
+}
+
+function renderChatView(c, keepScroll) {
+  c.unread = 0;
+  const it = ITEMS[c.itemId], price = chatItemPrice(c);
+  $("#screen").innerHTML = `<div class="chat">
+    <div class="chead"><button class="back" id="back">←</button><div class="ava">${c.ava}</div>
+      <div><b>${esc(c.name)}</b><div class="clast">${c.closed ? "чат закрыт" : "в сети"}</div></div>
+      <div class="chitem">${it.emoji} ${esc(it.name)}<br>${price ? `цена: <b>${fmt(price)} ₽</b>` : ""}<br><span class="timer" id="tm"></span></div></div>
+    <div class="msgs" id="msgs">${c.msgs.map(m => `<div class="m ${m.f} ${m.cls || ""}">${esc(m.t)}</div>`).join("")}
+      ${c.typing ? `<div class="typing">печатает<span>.</span><span>.</span><span>.</span></div>` : ""}</div>
+    ${c.replies.length && !c.closed ? `<div class="replies">${c.replies.map(r => `<button class="${r.cls || ""}" data-k="${r.k}">${esc(r.t)}</button>`).join("")}</div>` : ""}
+  </div>`;
+  $("#screen").style.overflowY = "hidden";
+  const m = $("#msgs"); m.scrollTop = m.scrollHeight;
+  $("#back").onclick = () => { openChatId = null; $("#screen").style.overflowY = ""; render(); };
+  document.querySelectorAll(".replies button").forEach(b => b.onclick = () => reply(c, b.dataset.k));
+  renderTop();
+}
+
+// ---------- работа (кликер) ----------
+const clickValue = () => Math.round(10 * Math.pow(1.6, S.work.click));
+const passiveValue = () => S.work.passive === 0 ? 0 : Math.round(15 * Math.pow(1.75, S.work.passive - 1));
+const clickCost = () => Math.round(300 * Math.pow(2.1, S.work.click));
+const passiveCost = () => Math.round(1500 * Math.pow(2.2, S.work.passive));
+
+function renderWork() {
+  $("#screen").innerHTML = `<div class="work">
+    <h2>Работа</h2><div class="sub">Нет денег на кейс? Поработай на фрилансе!</div>
+    <div class="pc" id="pc" role="button">💻</div>
+    <div class="stats"><span>За клик: <b>${fmt(clickValue())} ₽</b></span><span>Пассивно: <b>${fmt(passiveValue())} ₽/с</b></span></div>
+    <div class="up"><div class="ic">📚</div><div class="tx"><b>Курсы программирования</b><small>Ур. ${S.work.click} → за клик ${fmt(Math.round(10 * Math.pow(1.6, S.work.click + 1)))} ₽</small></div>
+      <button class="btn y" id="b1" ${S.money < clickCost() ? "disabled" : ""}>${short(clickCost())} ₽</button></div>
+    <div class="up"><div class="ic">🤖</div><div class="tx"><b>Нанять помощника</b><small>Ур. ${S.work.passive} → ${fmt(Math.round(15 * Math.pow(1.75, S.work.passive)))} ₽ в секунду</small></div>
+      <button class="btn y" id="b2" ${S.money < passiveCost() ? "disabled" : ""}>${short(passiveCost())} ₽</button></div>
+    ${adsOn() ? `<div class="up"><div class="ic">📺</div><div class="tx"><b>Подработка: реклама</b><small>Посмотри ролик и получи ${short(adReward())} ₽</small></div>
+      <button class="btn ad" id="b3" ${Date.now() < adCooldown ? "disabled" : ""}>${Date.now() < adCooldown ? Math.ceil((adCooldown - Date.now()) / 1000) + " с" : "Смотреть"}</button></div>` : ""}
+  </div>`;
+  const b3 = $("#b3");
+  if (b3) b3.onclick = () => showRewarded(() => {
+    const v = adReward(); addMoney(v); save(); snd("coin"); confetti(60);
+    toast(`📺 Спасибо за просмотр! +${fmt(v)} ₽`);
+    adCooldown = Date.now() + 60000; if (screen === "work") renderWork();
+  });
+  $("#pc").onpointerdown = ev => {
+    const v = clickValue(); addMoney(v); S.stats.earnedWork = (S.stats.earnedWork || 0) + v; S.stats.clicks = (S.stats.clicks || 0) + 1; snd("click");
+    const f = document.createElement("div"); f.className = "float"; f.textContent = "+" + fmt(v) + " ₽";
+    const r = $("#app").getBoundingClientRect();
+    f.style.left = (ev.clientX - r.left - 20) + "px"; f.style.top = (ev.clientY - r.top - 30) + "px";
+    $("#app").appendChild(f); setTimeout(() => f.remove(), 800);
+    updateWorkButtons();
+  };
+  $("#b1").onclick = () => { if (S.money < clickCost()) return; addMoney(-clickCost()); S.work.click++; save(); renderWork(); };
+  $("#b2").onclick = () => { if (S.money < passiveCost()) return; addMoney(-passiveCost()); S.work.passive++; save(); renderWork(); };
+}
+function updateWorkButtons() {
+  const b1 = $("#b1"), b2 = $("#b2");
+  if (b1) b1.disabled = S.money < clickCost();
+  if (b2) b2.disabled = S.money < passiveCost();
+}
+setInterval(() => {
+  const p = passiveValue();
+  if (p) { addMoney(p); if (screen === "work") updateWorkButtons(); }
+  if (screen === "cases") document.querySelectorAll(".case").forEach(b => { const c = CASES.find(x => x.id === b.dataset.c); b.classList.toggle("locked", S.money < c.price); });
+}, 1000);
+setInterval(save, 5000);
+
+// ---------- профиль и коллекция ----------
+const RANKS = [
+  [0, "🐣", "Новичок"], [20000, "🧢", "Барыга"], [250000, "😎", "Перекуп"], [3e6, "💼", "Бизнесмен"],
+  [5e7, "🎩", "Магнат"], [1e9, "👑", "Олигарх"],
+];
+function netWorth() { return S.money + S.inv.reduce((s, e) => s + ITEMS[e.id].price, 0); }
+function renderProfile() {
+  const nw = netWorth();
+  let ri = 0; RANKS.forEach((r, i) => { if (nw >= r[0]) ri = i; });
+  const [, re, rn] = RANKS[ri], next = RANKS[ri + 1];
+  const pr = next ? Math.min(100, (nw - RANKS[ri][0]) / (next[0] - RANKS[ri][0]) * 100) : 100;
+  const all = Object.keys(ITEMS), have = all.filter(id => S.found[id]).length;
+  const best = S.stats.best ? ITEMS[S.stats.best] : null;
+  $("#screen").innerHTML = `
+    <div class="rank"><div class="e">${re}</div><div style="flex:1;min-width:0"><b style="font-size:18px">${rn}</b>
+      <div class="clast">Состояние: ${short(nw)} ₽ ${next ? `· до «${next[2]}» ${short(next[0])} ₽` : ""}</div>
+      <div class="progress"><i style="width:${pr}%"></i></div></div></div>
+    <div class="prof">
+      <div class="stat"><small>Открыто кейсов</small><b>${fmt(S.stats.opened)}</b></div>
+      <div class="stat"><small>Продаж</small><b>${fmt(S.stats.sold)}</b></div>
+      <div class="stat"><small>Заработано продажами</small><b>${short(S.stats.earned)} ₽</b></div>
+      <div class="stat"><small>Лучший дроп</small><b>${best ? best.emoji + " " + esc(best.name) : "—"}</b></div>
+      <div class="stat"><small>Обманули мошенники</small><b>${fmt(S.stats.scammed)} раз</b></div>
+      <div class="stat"><small>Коллекция</small><b>${have} / ${all.length}</b></div>
+    </div>
+    <h2>Достижения <span class="sub" style="margin:0">${Object.keys(S.ach || {}).length} / ${ACH.length}</span></h2>
+    <div class="achs">${ACH.map(a => { const got = S.ach && S.ach[a.id];
+      return `<div class="ach ${got ? "got" : ""}"><div class="e">${a.e}</div><div class="tx"><b>${esc(a.n)}</b><small>${esc(a.d)}</small></div><div class="rw">${got ? "✅" : "+" + short(a.r) + " ₽"}</div></div>`; }).join("")}</div>
+    <h2>Коллекция</h2>
+    <div class="grid coll">${all.map(id => { const it = ITEMS[id]; const n = S.found[id] || 0;
+      return `<div class="item ${n ? "" : "unk"}" style="--rc:${RARITY[it.rarity].color}">${n ? `<span class="cnt">×${n}</span>` : ""}<div class="e">${it.emoji}</div>
+        <div class="n">${n ? esc(it.name) : "???"}</div><div class="p">${n ? short(it.price) + " ₽" : RARITY[it.rarity].name}</div></div>`; }).join("")}</div>
+    <div style="text-align:center;margin-top:18px"><button class="btn r" id="reset">Сбросить прогресс</button></div>`;
+  $("#reset").onclick = () => confirmBox("Точно начать заново?", "Пропадут деньги, вещи, коллекция и достижения.", "Да, сбросить", () => { S = freshState(); chats = []; save(); render(); });
+}
+
+// ---------- ежедневный подарок ----------
+const DAY = 24 * 3600 * 1000;
+function giftReady() { return Date.now() - S.gift.last >= DAY; }
+$("#gift").onclick = () => {
+  const ov = document.createElement("div"); ov.className = "overlay";
+  if (!giftReady()) {
+    const left = DAY - (Date.now() - S.gift.last);
+    const h = Math.floor(left / 3600000), m = Math.floor(left % 3600000 / 60000);
+    ov.innerHTML = `<div class="modal"><div class="drop">⏳</div><div class="iname">Подарок уже получен</div>
+      <div class="iprice">Следующий через ${h} ч ${m} мин</div><div class="btns"><button class="btn" id="ok">Ок</button></div></div>`;
+  } else {
+    const streak = (Date.now() - S.gift.last < 2 * DAY) ? Math.min(7, S.gift.streak + 1) : 1;
+    const sum = Math.max(1500, Math.round(netWorth() * 0.03)) * streak;
+    S.gift = { last: Date.now(), streak }; addMoney(sum); save();
+    ov.innerHTML = `<div class="modal"><div class="drop">🎁</div><div class="iname">Ежедневный подарок!</div>
+      <div class="pricebig">+${fmt(sum)} ₽</div><div class="iprice">День ${streak} из 7 — заходи каждый день, награда растёт</div>
+      <div class="btns"><button class="btn y" id="ok">Забрать</button></div></div>`;
+  }
+  $("#app").appendChild(ov);
+  ov.querySelector("#ok").onclick = () => { ov.remove(); render(); };
+};
+
+
+// ---------- своё окно подтверждения ----------
+function confirmBox(title, text, yes, onYes) {
+  const ov = document.createElement("div"); ov.className = "overlay";
+  ov.innerHTML = `<div class="modal"><div class="iname">${esc(title)}</div><div class="iprice">${esc(text)}</div>
+    <div class="btns"><button class="btn r" id="cy">${esc(yes)}</button><button class="btn" id="cn">Отмена</button></div></div>`;
+  $("#app").appendChild(ov);
+  ov.querySelector("#cy").onclick = () => { ov.remove(); onYes(); };
+  ov.querySelector("#cn").onclick = () => ov.remove();
+}
+
+// =====================================================================
+//                       ВЕРСИЯ 1.1 — НОВЫЕ ФИШКИ
+// =====================================================================
+const VERSION = "1.2";
+
+// ---------- звуки (синтез, без файлов) ----------
+let AC = null;
+function snd(type) {
+  if (!S.sound || (typeof muted === "function" && muted())) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === "suspended") AC.resume();
+    const t = AC.currentTime;
+    const tone = (f, d, st = 0, typ = "sine", vol = .07) => {
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.type = typ; o.frequency.setValueAtTime(f, t + st);
+      g.gain.setValueAtTime(vol, t + st); g.gain.exponentialRampToValueAtTime(.0001, t + st + d);
+      o.connect(g); g.connect(AC.destination); o.start(t + st); o.stop(t + st + d + .05);
+    };
+    const arp = (fs, d, gap, typ, vol) => fs.forEach((f, i) => tone(f, d, i * gap, typ, vol));
+    ({
+      tick: () => tone(1100, .03, 0, "square", .025),
+      click: () => tone(420, .04, 0, "triangle", .05),
+      coin: () => { tone(1320, .08, 0, "square", .04); tone(1980, .14, .07, "square", .04); },
+      msg: () => { tone(740, .09); tone(990, .12, .08); },
+      bad: () => { tone(220, .3, 0, "sawtooth", .05); tone(150, .4, .18, "sawtooth", .05); },
+      drop_c: () => tone(523, .18),
+      drop_u: () => arp([523, 659], .16, .09),
+      drop_r: () => arp([523, 659, 784], .18, .08, "triangle", .08),
+      drop_e: () => arp([523, 659, 784, 1047], .22, .08, "triangle", .09),
+      drop_l: () => arp([523, 659, 784, 1047, 1319, 1568], .28, .08, "triangle", .1),
+      drop_m: () => { arp([392, 523, 659, 784, 1047, 1319, 1568, 2093], .3, .07, "triangle", .1); tone(98, .8, 0, "sine", .12); },
+      win: () => arp([659, 784, 1047, 1319], .2, .09, "triangle", .09),
+      lose: () => arp([392, 330, 262, 196], .25, .12, "sawtooth", .05),
+      ach: () => arp([784, 988, 1175, 1568], .18, .07, "square", .04),
+    })[type]?.();
+  } catch (e) {}
+}
+
+// ---------- конфетти ----------
+function confetti(n = 120, colors = ["#ffd23f", "#33d17a", "#3d8bfd", "#ff5c8a", "#a259ff"]) {
+  const app = $("#app"), cv = document.createElement("canvas");
+  const W = app.clientWidth, H = app.clientHeight;
+  cv.width = W; cv.height = H; cv.className = "confetti";
+  app.appendChild(cv);
+  const ctx = cv.getContext("2d");
+  const ps = Array.from({ length: n }, () => ({
+    x: W / 2 + rnd(-40, 40), y: H * .38, vx: rnd(-7, 7), vy: rnd(-13, -4),
+    r: rnd(4, 8), a: rnd(0, 6), va: rnd(-.3, .3), c: pick(colors),
+  }));
+  let f = 0;
+  const step = () => {
+    ctx.clearRect(0, 0, W, H);
+    ps.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += .35; p.vx *= .99; p.a += p.va;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2); ctx.restore(); });
+    if (++f < 140) requestAnimationFrame(step); else cv.remove();
+  };
+  step();
+}
+
+// ---------- достижения ----------
+const ACH = [
+  { id: "first_case", e: "📦", n: "Первый кейс",       d: "Открой первый кейс",                 r: 300,   chk: () => S.stats.opened >= 1 },
+  { id: "cases50",    e: "🎰", n: "Азартный",          d: "Открой 50 кейсов",                   r: 5000,  chk: () => S.stats.opened >= 50 },
+  { id: "cases300",   e: "🤑", n: "Без тормозов",      d: "Открой 300 кейсов",                  r: 1e5,   chk: () => S.stats.opened >= 300 },
+  { id: "first_sale", e: "🤝", n: "Первая сделка",     d: "Продай вещь покупателю в чате",      r: 500,   chk: () => S.stats.sold >= 1 },
+  { id: "sales25",    e: "💼", n: "Торгаш",            d: "Продай 25 вещей",                    r: 15000, chk: () => S.stats.sold >= 25 },
+  { id: "sales100",   e: "🏪", n: "Свой магазин",      d: "Продай 100 вещей",                   r: 2e5,   chk: () => S.stats.sold >= 100 },
+  { id: "profit",     e: "📈", n: "Наварился",         d: "Продай вещь на 25% дороже рынка",    r: 3000,  chk: () => (S.stats.bestMarkup || 0) >= 1.25 },
+  { id: "antiscam",   e: "🛡️", n: "Не на того напал",  d: "Раскуси мошенника",                  r: 2000,  chk: () => (S.stats.antiscam || 0) >= 1 },
+  { id: "scammed",    e: "🤡", n: "Развели",           d: "Попадись мошеннику",                 r: 1000,  chk: () => S.stats.scammed >= 1 },
+  { id: "troll",      e: "🚫", n: "Бан-хаммер",        d: "Заблокируй тролля",                  r: 1000,  chk: () => (S.stats.blocked || 0) >= 1 },
+  { id: "legend",     e: "🌟", n: "Легенда",           d: "Получи легендарный предмет",         r: 10000, chk: () => Object.keys(S.found).some(id => ITEMS[id] && ITEMS[id].rarity === "l") },
+  { id: "myth",       e: "🔥", n: "Миф",               d: "Получи мифический предмет",          r: 50000, chk: () => Object.keys(S.found).some(id => ITEMS[id] && ITEMS[id].rarity === "m") },
+  { id: "coll25",     e: "📚", n: "Коллекционер",      d: "Собери 25 разных предметов",         r: 20000, chk: () => Object.keys(S.found).length >= 25 },
+  { id: "collAll",    e: "🏆", n: "Полная коллекция",  d: "Собери все предметы",                r: 1e8,   chk: () => Object.keys(S.found).length >= Object.keys(ITEMS).length },
+  { id: "upgrade",    e: "⬆️", n: "Рисковый",          d: "Выиграй апгрейд",                    r: 2000,  chk: () => (S.stats.upWins || 0) >= 1 },
+  { id: "upgrade10",  e: "🚀", n: "В космос",          d: "Выиграй апгрейд ×10",                r: 25000, chk: () => (S.stats.upX10 || 0) >= 1 },
+  { id: "worker",     e: "💻", n: "Трудяга",           d: "Сделай 500 кликов на работе",        r: 3000,  chk: () => (S.stats.clicks || 0) >= 500 },
+  { id: "million",    e: "💰", n: "Миллионер",         d: "Набери состояние 1 млн ₽",           r: 50000, chk: () => netWorth() >= 1e6 },
+  { id: "billion",    e: "👑", n: "Миллиардер",        d: "Набери состояние 1 млрд ₽",          r: 1e7,   chk: () => netWorth() >= 1e9 },
+];
+function checkAch() {
+  S.ach = S.ach || {};
+  ACH.forEach(a => {
+    if (S.ach[a.id] || !a.chk()) return;
+    S.ach[a.id] = Date.now(); addMoney(a.r); save();
+    snd("ach");
+    toast(`🏆 Достижение «${esc(a.n)}»! +${fmt(a.r)} ₽`, () => go("profile"));
+    if (screen === "profile") renderProfile();
+  });
+}
+
+// ---------- события рынка ----------
+const EVENTS = [
+  { t: "🔥 Хайп на стритвир! Уличные вещи покупают на 40% дороже", cs: "street", mult: 1.4 },
+  { t: "🎮 Вышла громкая игра! Геймерские вещи +40%", cs: "gamer", mult: 1.4 },
+  { t: "📱 Дефицит техники! Техника +35%", cs: "tech", mult: 1.35 },
+  { t: "🚗 Ажиотаж на авторынке! Машины +30%", cs: "garage", mult: 1.3 },
+  { t: "🎒 Сезон школы! Школьные вещи +50%", cs: "school", mult: 1.5 },
+  { t: "💎 Богачи скупают люкс! Люкс +30%", cs: "lux", mult: 1.3 },
+  { t: "📉 Кризис! Все покупатели платят на 20% меньше", mult: 0.8 },
+  { t: "⚡ Час пик! Покупатели пишут в 2 раза чаще", rush: true },
+  { t: "🚨 Волна мошенников! Будь внимателен в чатах", scam: true },
+];
+let EV = null, nextEventAt = Date.now() + 60000, adBoostUntil = 0;
+function eventMult(itemId) {
+  if (!EV || !EV.mult) return 1;
+  if (!EV.cs) return EV.mult;
+  const cs = CASES.find(c => c.id === EV.cs);
+  return cs && cs.items.includes(itemId) ? EV.mult : 1;
+}
+function buyerSpeed() { return (EV && EV.rush ? 2 : 1) * (Date.now() < adBoostUntil ? 2.5 : 1); }
+function renderEvent() {
+  const el = $("#event");
+  const ad = Date.now() < adBoostUntil;
+  if (!EV && !ad) { el.style.display = "none"; return; }
+  el.style.display = "";
+  const parts = [];
+  if (EV) parts.push(`${EV.t} <b>${Math.max(0, Math.ceil((EV.until - Date.now()) / 1000))} с</b>`);
+  if (ad) parts.push(`📣 Реклама у блогера: покупателей ×2,5 <b>${Math.ceil((adBoostUntil - Date.now()) / 1000)} с</b>`);
+  el.innerHTML = parts.join("<br>");
+}
+
+// ---------- апгрейд ----------
+const UP_MULTS = [1.5, 2, 3, 5, 10];
+function upgradeTarget(it, m) {
+  return Object.values(ITEMS).filter(x => x.price >= it.price * m && x.id !== it.id).sort((a, b) => a.price - b.price)[0] || null;
+}
+function upChance(it, tg) { return Math.min(0.9, it.price / tg.price * 0.9); }
+function upgradeDialog(uid) {
+  const e = S.inv.find(x => x.uid === uid); if (!e) return;
+  const it = ITEMS[e.id];
+  let pickM = null, busy = false;
+  const ov = document.createElement("div"); ov.className = "overlay";
+  $("#app").appendChild(ov);
+  const draw = () => {
+    const tg = pickM ? upgradeTarget(it, pickM) : null, ch = tg ? upChance(it, tg) : 0;
+    const R = 70, L = 2 * Math.PI * R;
+    ov.innerHTML = `<div class="modal up-modal">
+      <h2>⬆️ Апгрейд</h2>
+      <div class="sub" style="margin:0 0 6px">Ставишь вещь — если стрелка попадёт в зелёное, получишь вещь дороже. Если нет — вещь сгорит 🔥</div>
+      <div class="up-row">
+        <div class="up-it" style="--rc:${RARITY[it.rarity].color}"><div class="e">${it.emoji}</div><small>${esc(it.name)}</small><b>${short(it.price)} ₽</b></div>
+        <div class="gauge">
+          <svg viewBox="0 0 160 160"><circle cx="80" cy="80" r="${R}" class="g-bg"/>
+            <circle cx="80" cy="80" r="${R}" class="g-win" style="stroke-dasharray:${L * ch} ${L}"/></svg>
+          <div class="arrow" id="arrow"></div>
+          <div class="g-pct">${tg ? Math.round(ch * 100) + "%" : "?"}</div>
+        </div>
+        <div class="up-it" style="--rc:${tg ? RARITY[tg.rarity].color : "#2a3550"}">${tg ? `<div class="e">${tg.emoji}</div><small>${esc(tg.name)}</small><b>${short(tg.price)} ₽</b>` : `<div class="e">❔</div><small>Выбери множитель</small>`}</div>
+      </div>
+      <div class="mults">${UP_MULTS.map(m => { const t = upgradeTarget(it, m);
+        return `<button class="${pickM === m ? "on" : ""}" data-m="${m}" ${t ? "" : "disabled"}>×${m}<small>${t ? Math.round(upChance(it, t) * 100) + "%" : "—"}</small></button>`; }).join("")}</div>
+      <div class="btns"><button class="btn y" id="go" ${tg ? "" : "disabled"}>Рискнуть!</button><button class="btn" id="cl">Отмена</button></div>
+    </div>`;
+    ov.querySelectorAll(".mults button").forEach(b => b.onclick = () => { if (!busy) { pickM = +b.dataset.m; snd("click"); draw(); } });
+    ov.querySelector("#cl").onclick = () => { if (!busy) { ov.remove(); render(); } };
+    ov.querySelector("#go").onclick = () => tg && !busy && spin(tg, ch);
+  };
+  const spin = (tg, ch) => {
+    busy = true;
+    ov.querySelectorAll("button").forEach(b => b.disabled = true);
+    const win = Math.random() < ch;
+    const deg = win ? rnd(4, ch * 360 - 4) : rnd(ch * 360 + 4, 356);
+    const ar = ov.querySelector("#arrow");
+    ar.style.transition = "transform 3.2s cubic-bezier(.12,.7,.15,1)";
+    requestAnimationFrame(() => ar.style.transform = `rotate(${360 * 5 + deg}deg)`);
+    let tk = 0; const ti = setInterval(() => { if (++tk < 26) snd("tick"); else clearInterval(ti); }, 120);
+    setTimeout(() => {
+      removeItem(uid);
+      let newUid = null;
+      if (win) {
+        newUid = addItem(tg.id);
+        S.stats.upWins = (S.stats.upWins || 0) + 1;
+        if (pickM >= 10) S.stats.upX10 = (S.stats.upX10 || 0) + 1;
+        snd("win"); confetti(pickM >= 5 ? 160 : 80);
+      } else { S.stats.upLoses = (S.stats.upLoses || 0) + 1; snd("lose"); }
+      save();
+      ov.innerHTML = `<div class="modal" style="--rc:${win ? RARITY[tg.rarity].color : "#ff5c5c"}">
+        <div class="drop">${win ? tg.emoji : "🔥"}</div>
+        <div class="iname">${win ? "Апгрейд удался!" : "Не повезло…"}</div>
+        <div class="iprice">${win ? `${esc(it.name)} → <b>${esc(tg.name)}</b> (${fmt(tg.price)} ₽)` : `${esc(it.name)} сгорел. Шанс был ${Math.round(ch * 100)}%`}</div>
+        <div class="btns">${win ? `<button class="btn y" id="again">⬆️ Рискнуть ещё раз</button><button class="btn" id="sell">💬 Продать</button>` : ""}
+          <button class="btn" id="cl">Закрыть</button></div></div>`;
+      ov.querySelector("#cl").onclick = () => { ov.remove(); render(); };
+      if (win) {
+        ov.querySelector("#again").onclick = () => { ov.remove(); upgradeDialog(newUid); };
+        ov.querySelector("#sell").onclick = () => { ov.remove(); sellDialog(newUid); };
+      }
+    }, 3400);
+  };
+  draw();
+}
+
+// ---------- кнопка звука ----------
+function renderSound() { $("#snd").textContent = S.sound ? "🔊" : "🔇"; }
+$("#snd").onclick = () => { S.sound = !S.sound; save(); renderSound(); snd("click"); };
+
+// ---------- что нового ----------
+function whatsNew() {
+  if (S.seen === VERSION) return;
+  const firstTime = S.stats.opened === 0 && S.stats.sold === 0;
+  S.seen = VERSION; save();
+  const ov = document.createElement("div"); ov.className = "overlay";
+  ov.innerHTML = firstTime ? `<div class="modal"><div class="drop">🧢</div><div class="iname">Добро пожаловать в «Перекуп»!</div>
+      <div class="news">📦 Открывай кейсы — там всё, от ручки до острова<br>💬 Выставляй вещи и торгуйся с покупателями в чатах<br>⚠️ Остерегайся мошенников и троллей<br>💻 Нет денег — поработай на фрилансе<br>🏆 Собери коллекцию и стань олигархом!</div>
+      <div class="btns"><button class="btn y" id="ok">Погнали!</button></div></div>`
+    : `<div class="modal"><div class="drop">🎉</div><div class="iname">Обновление ${VERSION}</div>
+      <div class="news">${BUILD !== "web" ? "🏆 <b>Топ игроков</b><br>" : "🏆 <b>Топ игроков</b> и 👥 <b>«Позови друга»</b> — +50 000 ₽ вам обоим (в Telegram)<br>"}⬆️ <b>Апгрейд</b> — рискни вещью и получи дороже (до ×10)<br>📈 <b>События рынка</b> — хайп, кризис, час пик, волна мошенников<br>👵 Новые покупатели: <b>бабушка</b>, <b>блогер</b> с рекламой и <b>перекупщик</b><br>🏆 <b>19 достижений</b> с наградами — смотри в Профиле<br>🔊 <b>Звуки</b> и 🎊 <b>конфетти</b> за редкие вещи<br>🛠 Исправлены мелкие ошибки</div>
+      <div class="btns"><button class="btn y" id="ok">Круто!</button></div></div>`;
+  $("#app").appendChild(ov);
+  ov.querySelector("#ok").onclick = () => { ov.remove(); snd("win"); };
+}
+
+// ---------- общий таймер новых систем ----------
+setInterval(() => {
+  const now = Date.now();
+  if (!EV && now > nextEventAt) {
+    EV = Object.assign({}, pick(EVENTS), { until: now + 90000 });
+    toast(EV.t); snd("msg");
+  } else if (EV && now > EV.until) {
+    EV = null; nextEventAt = now + rnd(120000, 240000);
+  }
+  renderEvent();
+  checkAch();
+}, 1000);
+
+// =====================================================================
+//                      TELEGRAM MINI APP
+// =====================================================================
+const TG = window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData ? window.Telegram.WebApp : null;
+const CLOUD = TG && TG.isVersionAtLeast && TG.isVersionAtLeast("6.9") && TG.CloudStorage ? TG.CloudStorage : null;
+if (TG) {
+  try {
+    TG.ready(); TG.expand();
+    TG.setHeaderColor && TG.setHeaderColor("#171e2e");
+    TG.setBackgroundColor && TG.setBackgroundColor("#0f1420");
+    TG.disableVerticalSwipes && TG.disableVerticalSwipes();   // чтобы свайп по чату не закрывал игру
+    document.body.classList.add("tg");
+  } catch (e) {}
+}
+// вибрация телефона в Telegram
+function haptic(kind) {
+  if (!TG || !TG.HapticFeedback || !S.sound) return;
+  try {
+    if (kind === "light") TG.HapticFeedback.impactOccurred("light");
+    else if (kind === "heavy") TG.HapticFeedback.impactOccurred("heavy");
+    else TG.HapticFeedback.notificationOccurred(kind);   // success / error / warning
+  } catch (e) {}
+}
+const _snd = snd;
+snd = function (type) {
+  _snd(type);
+  const h = { click: "light", coin: "success", bad: "error", lose: "error", win: "success", ach: "success", drop_e: "heavy", drop_l: "heavy", drop_m: "heavy", msg: "light" }[type];
+  if (h) haptic(h);
+};
+
+// облачное сохранение Telegram: значение ≤ 4096 символов, поэтому режем на куски
+const CHUNK = 3800;
+let cloudTimer = null, cloudReady = false;
+function cloudSave() {
+  if (!CLOUD || cloudTimer || !cloudReady) return;   // пока облако не прочитано — ничего в него не пишем
+  cloudTimer = setTimeout(() => {
+    cloudTimer = null;
+    try {
+      const str = JSON.stringify(S), n = Math.ceil(str.length / CHUNK);
+      for (let i = 0; i < n; i++) CLOUD.setItem("s" + i, str.slice(i * CHUNK, (i + 1) * CHUNK));
+      CLOUD.setItem("n", String(n));
+    } catch (e) {}
+  }, 4000);
+}
+function cloudLoad() {
+  if (!CLOUD) return;
+  const ready = () => { cloudReady = true; cloudSave(); };
+  const fresh = S.stats.opened === 0 && S.stats.sold === 0 && S.inv.length === 0;
+  CLOUD.getItem("n", (err, n) => {
+    n = parseInt(n); if (err || !n) return ready();
+    const keys = Array.from({ length: n }, (_, i) => "s" + i);
+    CLOUD.getItems(keys, (err2, vals) => {
+      if (err2 || !vals) return ready();
+      try {
+        const cs = JSON.parse(keys.map(k => vals[k] || "").join(""));
+        if (cs && typeof cs.money === "number" && (fresh || (cs.ts || 0) > (S.ts || 0))) {
+          S = Object.assign(freshState(), cs);
+          try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+          renderSound(); render();
+          toast("☁️ Прогресс загружен из облака Telegram");
+        }
+      } catch (e) {}
+      ready();
+    });
+  });
+}
+cloudLoad();
+
+// =====================================================================
+//              ТОП ИГРОКОВ И «ПОЗОВИ ДРУГА» (через сервер)
+// =====================================================================
+const API = "https://perekup.kalaidzhan19972.workers.dev";            // адрес сервера Cloudflare Worker
+const BOT = "perekup_cases_bot";
+let NET = { top: null, place: null, refs: 0, id: null, err: null, at: 0 };
+const myTgId = () => TG && TG.initDataUnsafe && TG.initDataUnsafe.user ? TG.initDataUnsafe.user.id : null;
+const refLink = () => `https://t.me/${BOT}?start=ref_${myTgId()}`;
+
+async function syncNet(force) {
+  if (!TG || !API.startsWith("https://")) return;
+  if (!force && Date.now() - NET.at < 20000) return;
+  NET.at = Date.now();
+  try {
+    const r = await fetch(API + "/api/sync", { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ initData: TG.initData, score: Math.round(netWorth()) }) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || "ошибка");
+    NET = Object.assign(NET, { top: j.top, place: j.place, refs: j.refs, id: j.id, err: null });
+    if (j.bonus > 0) {
+      addMoney(j.bonus); S.stats.refBonus = (S.stats.refBonus || 0) + j.bonus; save();
+      snd("win"); confetti(120);
+      toast((j.notes || []).join("<br>") || `🎁 +${fmt(j.bonus)} ₽`);
+    }
+  } catch (e) { NET.err = "Не удалось связаться с сервером"; }
+  if (screen === "rating") renderRating();
+}
+
+function renderRating() {
+  const el = $("#screen");
+  if (BUILD === "yandex") return renderYandexTop();
+  if (BUILD === "vk") return renderVKTop();
+  if (!TG) {
+    el.innerHTML = `<h2>🏆 Топ игроков</h2>
+      <div class="empty">Рейтинг и приглашения друзей работают в Telegram.<br><br>
+      Открой игру через бота <b>@${BOT}</b> 🎮</div>`;
+    return;
+  }
+  const top = NET.top;
+  const medal = i => ["🥇", "🥈", "🥉"][i] || `<span class="pl">${i + 1}</span>`;
+  el.innerHTML = `
+    <h2>🏆 Топ перекупов</h2>
+    <div class="sub">Рейтинг по состоянию: деньги + стоимость вещей. ${NET.place ? `Ты на <b>${NET.place}</b> месте` : ""}</div>
+    <div class="invite">
+      <div class="e">👥</div>
+      <div class="tx"><b>Позови друга — +50 000 ₽ обоим!</b><small>Друг открывает бота по твоей ссылке и заходит в игру. Приглашено: <b>${NET.refs || 0}</b></small></div>
+    </div>
+    <div class="row2" style="margin-bottom:16px">
+      <button class="btn y" id="share">📨 Пригласить</button>
+      <button class="btn" id="copy">🔗 Копировать ссылку</button>
+    </div>
+    ${NET.err ? `<div class="empty">${NET.err}<br><button class="btn" id="retry" style="margin-top:10px">Повторить</button></div>`
+      : !top ? `<div class="empty">Загружаю рейтинг…</div>`
+      : `<div class="toplist">${top.map((t, i) => `<div class="trow ${t.me ? "me" : ""}"><div class="md">${medal(i)}</div>
+          <div class="nm">${esc(t.name)}${t.me ? " (ты)" : ""}</div><div class="sc">${short(t.score)} ₽</div></div>`).join("")}</div>`}`;
+  $("#share").onclick = () => {
+    const text = "Залетай в «Перекуп» — открывай кейсы, торгуйся и стань олигархом! По моей ссылке +50 000 ₽ на старте 🎁";
+    TG.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(refLink())}&text=${encodeURIComponent(text)}`);
+  };
+  $("#copy").onclick = async () => {
+    try { await navigator.clipboard.writeText(refLink()); toast("🔗 Ссылка скопирована"); }
+    catch (e) { toast(refLink()); }
+  };
+  const rt = $("#retry"); if (rt) rt.onclick = () => { NET.err = null; renderRating(); syncNet(true); };
+}
+const _go = go;
+go = function (s) { _go(s); if (s === "rating") syncNet(true); };
+document.querySelectorAll(".nav button").forEach(b => b.onclick = () => go(b.dataset.s));
+setInterval(() => syncNet(false), 60000);
+setTimeout(() => syncNet(true), 2500);
+initYandex();
+
+// =====================================================================
+//                         ЯНДЕКС ИГРЫ (SDK)
+// =====================================================================
+var YSDK = null, YPLAYER = null, yReady = false, yTimer = null;
+let adCooldown = 0, lastInter = Date.now(), adPlaying = false;
+const LB = "networth";                                   // техническое имя лидерборда в консоли
+const muteSet = new Set();
+function muted() { return muteSet.size > 0; }
+function setMute(reason, on) {
+  on ? muteSet.add(reason) : muteSet.delete(reason);
+  try { if (AC) muted() ? AC.suspend() : AC.resume(); } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => setMute("hidden", document.hidden));
+window.addEventListener("blur", () => setMute("blur", true));
+window.addEventListener("focus", () => setMute("blur", false));
+document.addEventListener("contextmenu", e => e.preventDefault());
+const adReward = () => Math.max(3000, Math.round(netWorth() * 0.03 / 100) * 100);
+
+function gameplay(on) { try { YSDK && YSDK.features.GameplayAPI && (on ? YSDK.features.GameplayAPI.start() : YSDK.features.GameplayAPI.stop()); } catch (e) {} }
+function adsOn() { return !!YSDK || !!VKB; }
+function showRewarded(onReward) {
+  if (VKB) return vkShowAd("reward", onReward);
+  if (!YSDK || adPlaying) return;
+  let got = false; adPlaying = true;
+  YSDK.adv.showRewardedVideo({ callbacks: {
+    onOpen: () => { setMute("ad", true); gameplay(false); },
+    onRewarded: () => { got = true; },
+    onClose: () => { adPlaying = false; setMute("ad", false); gameplay(true); if (got) onReward(); },
+    onError: () => { adPlaying = false; setMute("ad", false); gameplay(true); toast("Реклама сейчас недоступна, попробуй позже"); },
+  } });
+}
+function maybeInterstitial() {
+  if ((!YSDK && !VKB) || adPlaying) return;
+  if (S.stats.opened % 6 !== 0 || Date.now() - lastInter < 90000) return;   // не чаще раза в 1,5 минуты
+  lastInter = Date.now();
+  if (VKB) return vkShowAd("interstitial");
+  adPlaying = true;
+  YSDK.adv.showFullscreenAdv({ callbacks: {
+    onOpen: () => { setMute("ad", true); gameplay(false); },
+    onClose: () => { adPlaying = false; setMute("ad", false); gameplay(true); },
+    onError: () => { adPlaying = false; setMute("ad", false); gameplay(true); },
+  } });
+}
+// облачное сохранение Яндекса
+function ySave() {
+  if (!YPLAYER || !yReady || yTimer) return;
+  yTimer = setTimeout(() => { yTimer = null; try { YPLAYER.setData({ save: S }, false); } catch (e) {} }, 5000);
+}
+// лидерборд Яндекса (очки — состояние в тысячах ₽)
+let YTOP = { list: null, me: null, err: null, at: 0 };
+const yAuthed = () => YPLAYER && YPLAYER.getMode && YPLAYER.getMode() !== "lite";
+async function yScore() {
+  if (!YSDK || !yAuthed() || !YSDK.leaderboards) return;
+  try { await YSDK.leaderboards.setScore(LB, Math.min(2e9, Math.floor(netWorth() / 1000))); } catch (e) {}
+}
+async function yLoadTop() {
+  if (!YSDK || !YSDK.leaderboards) { YTOP.err = "Рейтинг пока недоступен"; return; }
+  try {
+    const r = await YSDK.leaderboards.getEntries(LB, { quantityTop: 20, includeUser: yAuthed(), quantityAround: 3 });
+    YTOP.list = r.entries.map(e => ({ rank: e.rank, name: (e.player && e.player.publicName) || "Игрок", score: e.score * 1000, me: r.userRank && e.rank === r.userRank }));
+    YTOP.me = r.userRank || null; YTOP.err = null;
+  } catch (e) { YTOP.err = "Рейтинг пока недоступен"; }
+}
+function renderYandexTop() {
+  const el = $("#screen");
+  const medal = r => ["🥇", "🥈", "🥉"][r - 1] || `<span class="pl">${r}</span>`;
+  el.innerHTML = `<h2>🏆 Топ перекупов</h2>
+    <div class="sub">Рейтинг по состоянию: деньги + стоимость вещей. ${YTOP.me ? `Ты на <b>${YTOP.me}</b> месте` : ""}</div>
+    ${YSDK && !yAuthed() ? `<div class="invite"><div class="e">👤</div><div class="tx"><b>Войди, чтобы попасть в рейтинг</b><small>И прогресс сохранится на всех устройствах</small></div></div>
+      <button class="btn y" id="auth" style="width:100%;margin-bottom:14px">Войти через Яндекс</button>` : ""}
+    ${YTOP.err ? `<div class="empty">${YTOP.err}</div>` : !YTOP.list ? `<div class="empty">Загружаю рейтинг…</div>`
+      : YTOP.list.length ? `<div class="toplist">${YTOP.list.map(t => `<div class="trow ${t.me ? "me" : ""}"><div class="md">${medal(t.rank)}</div>
+        <div class="nm">${esc(t.name)}${t.me ? " (ты)" : ""}</div><div class="sc">${short(t.score)} ₽</div></div>`).join("")}</div>`
+      : `<div class="empty">Пока пусто — стань первым!</div>`}`;
+  const a = $("#auth");
+  if (a) a.onclick = () => YSDK.auth.openAuthDialog().then(async () => {
+    YPLAYER = await YSDK.getPlayer({ scopes: true }); await yScore(); await yLoadTop(); renderYandexTop();
+  }).catch(() => {});
+}
+async function initYandex() {
+  if (BUILD !== "yandex" || !window.YaGames) return;
+  try {
+    YSDK = await YaGames.init();
+    try { YSDK.features.LoadingAPI && YSDK.features.LoadingAPI.ready(); } catch (e) {}
+    gameplay(true);
+    try {
+      YPLAYER = await YSDK.getPlayer({ scopes: false });
+      const d = await YPLAYER.getData(["save"]);
+      const fresh = S.stats.opened === 0 && S.stats.sold === 0 && S.inv.length === 0;
+      if (d && d.save && typeof d.save.money === "number" && (fresh || (d.save.ts || 0) > (S.ts || 0))) {
+        S = Object.assign(freshState(), d.save);
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+        renderSound(); toast("☁️ Прогресс загружен");
+      }
+    } catch (e) {}
+    yReady = true; ySave();
+    render();
+    yScore();
+    setInterval(yScore, 90000);
+  } catch (e) {}
+}
+if (BUILD === "yandex") {
+  const _go2 = go;
+  go = function (s) { _go2(s); if (s === "rating") yLoadTop().then(() => { if (screen === "rating") renderYandexTop(); }); };
+  document.querySelectorAll(".nav button").forEach(b => b.onclick = () => go(b.dataset.s));
+}
+
+// =====================================================================
+//                       ВКОНТАКТЕ (VK Mini Apps / VK Bridge)
+// =====================================================================
+var VKB = null, vkReady = false, vkTimer = null;
+const VK_CHUNK = 1200;                                   // значение ключа в хранилище VK ≤ 4096 байт
+const vkParams = new URLSearchParams(location.search);
+const vkAppId = () => vkParams.get("vk_app_id") || "";
+const vkLink = () => vkAppId() ? `https://vk.com/app${vkAppId()}` : "https://vk.com/apps";
+function vkSend(m, p) { return VKB.send(m, p || {}); }
+function vkShowAd(format, onReward) {
+  if (!VKB || adPlaying) return;
+  adPlaying = true; setMute("ad", true);
+  const done = () => { adPlaying = false; setMute("ad", false); };
+  vkSend("VKWebAppShowNativeAds", { ad_format: format })
+    .then(r => { done(); if (r && r.result) { if (onReward) onReward(); } else if (onReward) toast("Реклама сейчас недоступна, попробуй позже"); })
+    .catch(() => { done(); if (onReward) toast("Реклама сейчас недоступна, попробуй позже"); });
+}
+function vkSave() {
+  if (!VKB || !vkReady || vkTimer) return;
+  vkTimer = setTimeout(async () => {
+    vkTimer = null;
+    try {
+      const str = JSON.stringify(S), n = Math.ceil(str.length / VK_CHUNK);
+      for (let i = 0; i < n; i++) await vkSend("VKWebAppStorageSet", { key: "s" + i, value: str.slice(i * VK_CHUNK, (i + 1) * VK_CHUNK) });
+      await vkSend("VKWebAppStorageSet", { key: "n", value: String(n) });
+    } catch (e) {}
+  }, 5000);
+}
+async function vkLoad() {
+  const fresh = S.stats.opened === 0 && S.stats.sold === 0 && S.inv.length === 0;
+  const r = await vkSend("VKWebAppStorageGet", { keys: ["n"] });
+  const n = parseInt(((r.keys || [])[0] || {}).value);
+  if (!n || n > 200) return;
+  const keys = Array.from({ length: n }, (_, i) => "s" + i), map = {};
+  for (let i = 0; i < keys.length; i += 10) {
+    const part = await vkSend("VKWebAppStorageGet", { keys: keys.slice(i, i + 10) });
+    (part.keys || []).forEach(k => map[k.key] = k.value);
+  }
+  const cs = JSON.parse(keys.map(k => map[k] || "").join(""));
+  if (cs && typeof cs.money === "number" && (fresh || (cs.ts || 0) > (S.ts || 0))) {
+    S = Object.assign(freshState(), cs);
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+    renderSound(); render(); toast("☁️ Прогресс загружен");
+  }
+}
+function renderVKTop() {
+  $("#screen").innerHTML = `<h2>🏆 Топ перекупов</h2>
+    <div class="sub">Твоё состояние: <b>${fmt(netWorth())} ₽</b></div>
+    <div class="invite"><div class="e">👥</div><div class="tx"><b>Играй с друзьями!</b><small>Позови друзей — посмотрим, кто первым станет олигархом</small></div></div>
+    <div class="row2" style="margin-bottom:16px">
+      <button class="btn y" id="vinv">📨 Пригласить</button>
+      <button class="btn" id="vshare">📢 Поделиться</button>
+    </div>
+    <div class="empty">Общий рейтинг игроков появится в одном из ближайших обновлений 🔥</div>`;
+  $("#vinv").onclick = () => vkSend("VKWebAppShowInviteBox").catch(() => {});
+  $("#vshare").onclick = () => vkSend("VKWebAppShare", { link: vkLink() }).catch(() => {});
+}
+async function initVK() {
+  if (BUILD !== "vk" || !window.vkBridge) return;
+  VKB = window.vkBridge;
+  VKB.subscribe(e => {
+    const t = e && e.detail && e.detail.type;
+    if (t === "VKWebAppViewHide") setMute("hidden", true);
+    if (t === "VKWebAppViewRestore") setMute("hidden", false);
+  });
+  try { await vkSend("VKWebAppInit"); } catch (e) {}
+  try { await vkLoad(); } catch (e) {}
+  vkReady = true; vkSave();
+  render();
+}
+initVK();
+
+// ---------- старт ----------
+if (S.inv.some(e => e.status === "listed")) scheduleBuyer(4000);
+renderSound();
+render();
+whatsNew();
+
+</script>
+</body>
+</html>

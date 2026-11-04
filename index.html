@@ -191,6 +191,21 @@ body.tg .app{max-width:none;box-shadow:none}
 .trow.me{background:linear-gradient(90deg,#4a3a00,var(--panel2));border:1px solid var(--accent)}
 .trow .md{width:30px;text-align:center;font-size:20px}.trow .pl{font-size:14px;color:var(--muted);font-weight:800}
 .trow .nm{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.trow .sc{font-weight:900;color:var(--accent)}
+.btn.ad{background:linear-gradient(90deg,#7a3cff,#3d8bfd);color:#fff;border:0}
+body{-webkit-user-select:none;user-select:none}
+
+/* ---- широкий экран (ПК) ---- */
+@media (min-width:900px){
+  .app{max-width:1100px}
+  .cases{grid-template-columns:repeat(4,1fr)}
+  .grid{grid-template-columns:repeat(6,1fr)}
+  .prof{grid-template-columns:repeat(3,1fr)}
+  .modal{max-width:560px}
+  .chat .msgs{padding:12px 8%}
+  .work .up{max-width:640px;margin-left:auto;margin-right:auto}
+  .toplist,.invite{max-width:760px;margin-left:auto;margin-right:auto}
+  .screen{padding:18px 28px}
+}
 </style>
 </head>
 <body>
@@ -283,6 +298,7 @@ if (typeof module !== "undefined") module.exports = { RARITY, ITEMS, CASES };
 
 </script>
 <script>
+const BUILD = "web";   // "web" (сайт + Telegram) или "yandex"
 // ===== ПЕРЕКУП: логика игры =====
 const SAVE_KEY = "perekup_save_v1";
 const $ = s => document.querySelector(s);
@@ -306,7 +322,7 @@ function freshState() {
 }
 let S = freshState();
 try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s.money === "number") S = Object.assign(freshState(), s); } catch (e) {}
-const save = () => { S.ts = Date.now(); try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} if (typeof cloudSave === "function") cloudSave(); };
+const save = () => { S.ts = Date.now(); try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {} if (typeof cloudSave === "function") cloudSave(); if (typeof ySave === "function") ySave(); if (typeof vkSave === "function") vkSave(); };
 
 let screen = "cases", invTab = "all", openChatId = null;
 let chats = [];          // чаты не сохраняются — после перезахода придут новые покупатели
@@ -381,6 +397,7 @@ function openCase(c) {
   if (S.money < c.price) { toast(`Не хватает денег. Заработай на вкладке «Работа» 💻`); return; }
   addMoney(-c.price);
   S.stats.opened++;
+  if (typeof maybeInterstitial === "function") maybeInterstitial();
   const win = rollItem(c);
   const ov = document.createElement("div");
   ov.className = "overlay";
@@ -451,6 +468,17 @@ function showDrop(ov, c, id) {
   ov.querySelector("#upg").onclick = () => { ov.remove(); upgradeDialog(uid); };
   ov.querySelector("#keep").onclick = () => { ov.remove(); render(); };
   ov.querySelector("#quick").onclick = () => { quickSell(uid); ov.remove(); render(); };
+  if (adsOn()) {
+    const b = document.createElement("button");
+    b.className = "btn ad"; b.textContent = `📺 Скупщику ×2 за рекламу: ${short(it.price * 1.4)} ₽`;
+    ov.querySelector(".btns").prepend(b);
+    b.onclick = () => showRewarded(() => {
+      if (!S.inv.find(x => x.uid === uid)) return;
+      removeItem(uid); const sum = Math.round(it.price * 1.4);
+      addMoney(sum); S.stats.earned += sum; save(); snd("coin");
+      toast(`📺 Скупщик заплатил ×2: +${fmt(sum)} ₽`); ov.remove(); render();
+    });
+  }
   ov.querySelector("#sell").onclick = () => { ov.remove(); sellDialog(uid); };
   ov.querySelector("#again").onclick = () => { ov.remove(); render(); openCase(c); };
 }
@@ -880,7 +908,15 @@ function renderWork() {
       <button class="btn y" id="b1" ${S.money < clickCost() ? "disabled" : ""}>${short(clickCost())} ₽</button></div>
     <div class="up"><div class="ic">🤖</div><div class="tx"><b>Нанять помощника</b><small>Ур. ${S.work.passive} → ${fmt(Math.round(15 * Math.pow(1.75, S.work.passive)))} ₽ в секунду</small></div>
       <button class="btn y" id="b2" ${S.money < passiveCost() ? "disabled" : ""}>${short(passiveCost())} ₽</button></div>
+    ${adsOn() ? `<div class="up"><div class="ic">📺</div><div class="tx"><b>Подработка: реклама</b><small>Посмотри ролик и получи ${short(adReward())} ₽</small></div>
+      <button class="btn ad" id="b3" ${Date.now() < adCooldown ? "disabled" : ""}>${Date.now() < adCooldown ? Math.ceil((adCooldown - Date.now()) / 1000) + " с" : "Смотреть"}</button></div>` : ""}
   </div>`;
+  const b3 = $("#b3");
+  if (b3) b3.onclick = () => showRewarded(() => {
+    const v = adReward(); addMoney(v); save(); snd("coin"); confetti(60);
+    toast(`📺 Спасибо за просмотр! +${fmt(v)} ₽`);
+    adCooldown = Date.now() + 60000; if (screen === "work") renderWork();
+  });
   $("#pc").onpointerdown = ev => {
     const v = clickValue(); addMoney(v); S.stats.earnedWork = (S.stats.earnedWork || 0) + v; S.stats.clicks = (S.stats.clicks || 0) + 1; snd("click");
     const f = document.createElement("div"); f.className = "float"; f.textContent = "+" + fmt(v) + " ₽";
@@ -981,7 +1017,7 @@ const VERSION = "1.2";
 // ---------- звуки (синтез, без файлов) ----------
 let AC = null;
 function snd(type) {
-  if (!S.sound) return;
+  if (!S.sound || (typeof muted === "function" && muted())) return;
   try {
     AC = AC || new (window.AudioContext || window.webkitAudioContext)();
     if (AC.state === "suspended") AC.resume();
@@ -1182,7 +1218,7 @@ function whatsNew() {
       <div class="news">📦 Открывай кейсы — там всё, от ручки до острова<br>💬 Выставляй вещи и торгуйся с покупателями в чатах<br>⚠️ Остерегайся мошенников и троллей<br>💻 Нет денег — поработай на фрилансе<br>🏆 Собери коллекцию и стань олигархом!</div>
       <div class="btns"><button class="btn y" id="ok">Погнали!</button></div></div>`
     : `<div class="modal"><div class="drop">🎉</div><div class="iname">Обновление ${VERSION}</div>
-      <div class="news">🏆 <b>Топ игроков</b> и 👥 <b>«Позови друга»</b> — +50 000 ₽ вам обоим (в Telegram)<br>⬆️ <b>Апгрейд</b> — рискни вещью и получи дороже (до ×10)<br>📈 <b>События рынка</b> — хайп, кризис, час пик, волна мошенников<br>👵 Новые покупатели: <b>бабушка</b>, <b>блогер</b> с рекламой и <b>перекупщик</b><br>🏆 <b>19 достижений</b> с наградами — смотри в Профиле<br>🔊 <b>Звуки</b> и 🎊 <b>конфетти</b> за редкие вещи<br>🛠 Исправлены мелкие ошибки</div>
+      <div class="news">${BUILD !== "web" ? "🏆 <b>Топ игроков</b><br>" : "🏆 <b>Топ игроков</b> и 👥 <b>«Позови друга»</b> — +50 000 ₽ вам обоим (в Telegram)<br>"}⬆️ <b>Апгрейд</b> — рискни вещью и получи дороже (до ×10)<br>📈 <b>События рынка</b> — хайп, кризис, час пик, волна мошенников<br>👵 Новые покупатели: <b>бабушка</b>, <b>блогер</b> с рекламой и <b>перекупщик</b><br>🏆 <b>19 достижений</b> с наградами — смотри в Профиле<br>🔊 <b>Звуки</b> и 🎊 <b>конфетти</b> за редкие вещи<br>🛠 Исправлены мелкие ошибки</div>
       <div class="btns"><button class="btn y" id="ok">Круто!</button></div></div>`;
   $("#app").appendChild(ov);
   ov.querySelector("#ok").onclick = () => { ov.remove(); snd("win"); };
@@ -1299,6 +1335,8 @@ async function syncNet(force) {
 
 function renderRating() {
   const el = $("#screen");
+  if (BUILD === "yandex") return renderYandexTop();
+  if (BUILD === "vk") return renderVKTop();
   if (!TG) {
     el.innerHTML = `<h2>🏆 Топ игроков</h2>
       <div class="empty">Рейтинг и приглашения друзей работают в Telegram.<br><br>
@@ -1337,6 +1375,186 @@ go = function (s) { _go(s); if (s === "rating") syncNet(true); };
 document.querySelectorAll(".nav button").forEach(b => b.onclick = () => go(b.dataset.s));
 setInterval(() => syncNet(false), 60000);
 setTimeout(() => syncNet(true), 2500);
+initYandex();
+
+// =====================================================================
+//                         ЯНДЕКС ИГРЫ (SDK)
+// =====================================================================
+var YSDK = null, YPLAYER = null, yReady = false, yTimer = null;
+let adCooldown = 0, lastInter = Date.now(), adPlaying = false;
+const LB = "networth";                                   // техническое имя лидерборда в консоли
+const muteSet = new Set();
+function muted() { return muteSet.size > 0; }
+function setMute(reason, on) {
+  on ? muteSet.add(reason) : muteSet.delete(reason);
+  try { if (AC) muted() ? AC.suspend() : AC.resume(); } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => setMute("hidden", document.hidden));
+window.addEventListener("blur", () => setMute("blur", true));
+window.addEventListener("focus", () => setMute("blur", false));
+document.addEventListener("contextmenu", e => e.preventDefault());
+const adReward = () => Math.max(3000, Math.round(netWorth() * 0.03 / 100) * 100);
+
+function gameplay(on) { try { YSDK && YSDK.features.GameplayAPI && (on ? YSDK.features.GameplayAPI.start() : YSDK.features.GameplayAPI.stop()); } catch (e) {} }
+function adsOn() { return !!YSDK || !!VKB; }
+function showRewarded(onReward) {
+  if (VKB) return vkShowAd("reward", onReward);
+  if (!YSDK || adPlaying) return;
+  let got = false; adPlaying = true;
+  YSDK.adv.showRewardedVideo({ callbacks: {
+    onOpen: () => { setMute("ad", true); gameplay(false); },
+    onRewarded: () => { got = true; },
+    onClose: () => { adPlaying = false; setMute("ad", false); gameplay(true); if (got) onReward(); },
+    onError: () => { adPlaying = false; setMute("ad", false); gameplay(true); toast("Реклама сейчас недоступна, попробуй позже"); },
+  } });
+}
+function maybeInterstitial() {
+  if ((!YSDK && !VKB) || adPlaying) return;
+  if (S.stats.opened % 6 !== 0 || Date.now() - lastInter < 90000) return;   // не чаще раза в 1,5 минуты
+  lastInter = Date.now();
+  if (VKB) return vkShowAd("interstitial");
+  adPlaying = true;
+  YSDK.adv.showFullscreenAdv({ callbacks: {
+    onOpen: () => { setMute("ad", true); gameplay(false); },
+    onClose: () => { adPlaying = false; setMute("ad", false); gameplay(true); },
+    onError: () => { adPlaying = false; setMute("ad", false); gameplay(true); },
+  } });
+}
+// облачное сохранение Яндекса
+function ySave() {
+  if (!YPLAYER || !yReady || yTimer) return;
+  yTimer = setTimeout(() => { yTimer = null; try { YPLAYER.setData({ save: S }, false); } catch (e) {} }, 5000);
+}
+// лидерборд Яндекса (очки — состояние в тысячах ₽)
+let YTOP = { list: null, me: null, err: null, at: 0 };
+const yAuthed = () => YPLAYER && YPLAYER.getMode && YPLAYER.getMode() !== "lite";
+async function yScore() {
+  if (!YSDK || !yAuthed() || !YSDK.leaderboards) return;
+  try { await YSDK.leaderboards.setScore(LB, Math.min(2e9, Math.floor(netWorth() / 1000))); } catch (e) {}
+}
+async function yLoadTop() {
+  if (!YSDK || !YSDK.leaderboards) { YTOP.err = "Рейтинг пока недоступен"; return; }
+  try {
+    const r = await YSDK.leaderboards.getEntries(LB, { quantityTop: 20, includeUser: yAuthed(), quantityAround: 3 });
+    YTOP.list = r.entries.map(e => ({ rank: e.rank, name: (e.player && e.player.publicName) || "Игрок", score: e.score * 1000, me: r.userRank && e.rank === r.userRank }));
+    YTOP.me = r.userRank || null; YTOP.err = null;
+  } catch (e) { YTOP.err = "Рейтинг пока недоступен"; }
+}
+function renderYandexTop() {
+  const el = $("#screen");
+  const medal = r => ["🥇", "🥈", "🥉"][r - 1] || `<span class="pl">${r}</span>`;
+  el.innerHTML = `<h2>🏆 Топ перекупов</h2>
+    <div class="sub">Рейтинг по состоянию: деньги + стоимость вещей. ${YTOP.me ? `Ты на <b>${YTOP.me}</b> месте` : ""}</div>
+    ${YSDK && !yAuthed() ? `<div class="invite"><div class="e">👤</div><div class="tx"><b>Войди, чтобы попасть в рейтинг</b><small>И прогресс сохранится на всех устройствах</small></div></div>
+      <button class="btn y" id="auth" style="width:100%;margin-bottom:14px">Войти через Яндекс</button>` : ""}
+    ${YTOP.err ? `<div class="empty">${YTOP.err}</div>` : !YTOP.list ? `<div class="empty">Загружаю рейтинг…</div>`
+      : YTOP.list.length ? `<div class="toplist">${YTOP.list.map(t => `<div class="trow ${t.me ? "me" : ""}"><div class="md">${medal(t.rank)}</div>
+        <div class="nm">${esc(t.name)}${t.me ? " (ты)" : ""}</div><div class="sc">${short(t.score)} ₽</div></div>`).join("")}</div>`
+      : `<div class="empty">Пока пусто — стань первым!</div>`}`;
+  const a = $("#auth");
+  if (a) a.onclick = () => YSDK.auth.openAuthDialog().then(async () => {
+    YPLAYER = await YSDK.getPlayer({ scopes: true }); await yScore(); await yLoadTop(); renderYandexTop();
+  }).catch(() => {});
+}
+async function initYandex() {
+  if (BUILD !== "yandex" || !window.YaGames) return;
+  try {
+    YSDK = await YaGames.init();
+    try { YSDK.features.LoadingAPI && YSDK.features.LoadingAPI.ready(); } catch (e) {}
+    gameplay(true);
+    try {
+      YPLAYER = await YSDK.getPlayer({ scopes: false });
+      const d = await YPLAYER.getData(["save"]);
+      const fresh = S.stats.opened === 0 && S.stats.sold === 0 && S.inv.length === 0;
+      if (d && d.save && typeof d.save.money === "number" && (fresh || (d.save.ts || 0) > (S.ts || 0))) {
+        S = Object.assign(freshState(), d.save);
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+        renderSound(); toast("☁️ Прогресс загружен");
+      }
+    } catch (e) {}
+    yReady = true; ySave();
+    render();
+    yScore();
+    setInterval(yScore, 90000);
+  } catch (e) {}
+}
+if (BUILD === "yandex") {
+  const _go2 = go;
+  go = function (s) { _go2(s); if (s === "rating") yLoadTop().then(() => { if (screen === "rating") renderYandexTop(); }); };
+  document.querySelectorAll(".nav button").forEach(b => b.onclick = () => go(b.dataset.s));
+}
+
+// =====================================================================
+//                       ВКОНТАКТЕ (VK Mini Apps / VK Bridge)
+// =====================================================================
+var VKB = null, vkReady = false, vkTimer = null;
+const VK_CHUNK = 1200;                                   // значение ключа в хранилище VK ≤ 4096 байт
+const vkParams = new URLSearchParams(location.search);
+const vkAppId = () => vkParams.get("vk_app_id") || "";
+const vkLink = () => vkAppId() ? `https://vk.com/app${vkAppId()}` : "https://vk.com/apps";
+function vkSend(m, p) { return VKB.send(m, p || {}); }
+function vkShowAd(format, onReward) {
+  if (!VKB || adPlaying) return;
+  adPlaying = true; setMute("ad", true);
+  const done = () => { adPlaying = false; setMute("ad", false); };
+  vkSend("VKWebAppShowNativeAds", { ad_format: format })
+    .then(r => { done(); if (r && r.result) { if (onReward) onReward(); } else if (onReward) toast("Реклама сейчас недоступна, попробуй позже"); })
+    .catch(() => { done(); if (onReward) toast("Реклама сейчас недоступна, попробуй позже"); });
+}
+function vkSave() {
+  if (!VKB || !vkReady || vkTimer) return;
+  vkTimer = setTimeout(async () => {
+    vkTimer = null;
+    try {
+      const str = JSON.stringify(S), n = Math.ceil(str.length / VK_CHUNK);
+      for (let i = 0; i < n; i++) await vkSend("VKWebAppStorageSet", { key: "s" + i, value: str.slice(i * VK_CHUNK, (i + 1) * VK_CHUNK) });
+      await vkSend("VKWebAppStorageSet", { key: "n", value: String(n) });
+    } catch (e) {}
+  }, 5000);
+}
+async function vkLoad() {
+  const fresh = S.stats.opened === 0 && S.stats.sold === 0 && S.inv.length === 0;
+  const r = await vkSend("VKWebAppStorageGet", { keys: ["n"] });
+  const n = parseInt(((r.keys || [])[0] || {}).value);
+  if (!n || n > 200) return;
+  const keys = Array.from({ length: n }, (_, i) => "s" + i), map = {};
+  for (let i = 0; i < keys.length; i += 10) {
+    const part = await vkSend("VKWebAppStorageGet", { keys: keys.slice(i, i + 10) });
+    (part.keys || []).forEach(k => map[k.key] = k.value);
+  }
+  const cs = JSON.parse(keys.map(k => map[k] || "").join(""));
+  if (cs && typeof cs.money === "number" && (fresh || (cs.ts || 0) > (S.ts || 0))) {
+    S = Object.assign(freshState(), cs);
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) {}
+    renderSound(); render(); toast("☁️ Прогресс загружен");
+  }
+}
+function renderVKTop() {
+  $("#screen").innerHTML = `<h2>🏆 Топ перекупов</h2>
+    <div class="sub">Твоё состояние: <b>${fmt(netWorth())} ₽</b></div>
+    <div class="invite"><div class="e">👥</div><div class="tx"><b>Играй с друзьями!</b><small>Позови друзей — посмотрим, кто первым станет олигархом</small></div></div>
+    <div class="row2" style="margin-bottom:16px">
+      <button class="btn y" id="vinv">📨 Пригласить</button>
+      <button class="btn" id="vshare">📢 Поделиться</button>
+    </div>
+    <div class="empty">Общий рейтинг игроков появится в одном из ближайших обновлений 🔥</div>`;
+  $("#vinv").onclick = () => vkSend("VKWebAppShowInviteBox").catch(() => {});
+  $("#vshare").onclick = () => vkSend("VKWebAppShare", { link: vkLink() }).catch(() => {});
+}
+async function initVK() {
+  if (BUILD !== "vk" || !window.vkBridge) return;
+  VKB = window.vkBridge;
+  VKB.subscribe(e => {
+    const t = e && e.detail && e.detail.type;
+    if (t === "VKWebAppViewHide") setMute("hidden", true);
+    if (t === "VKWebAppViewRestore") setMute("hidden", false);
+  });
+  try { await vkSend("VKWebAppInit"); } catch (e) {}
+  try { await vkLoad(); } catch (e) {}
+  vkReady = true; vkSave();
+  render();
+}
+initVK();
 
 // ---------- старт ----------
 if (S.inv.some(e => e.status === "listed")) scheduleBuyer(4000);
