@@ -132,6 +132,7 @@ body.tg .app{max-width:none;box-shadow:none}
 .work{text-align:center}
 .pc{font-size:130px;margin:16px auto 6px;display:block;transition:transform .07s;filter:drop-shadow(0 12px 20px rgba(0,0,0,.5));user-select:none}
 .pc:active{transform:scale(.92)}
+.energy{display:flex;align-items:center;gap:10px;max-width:340px;margin:0 auto 10px}.ebar{flex:1;height:10px;border-radius:6px;background:var(--panel2);overflow:hidden}.ebar i{display:block;height:100%;background:linear-gradient(90deg,#ffd23f,#33d17a);transition:width .3s}.ebar i.low{background:var(--red)}.energy span{font-size:13px;font-weight:800;color:var(--muted);min-width:78px;text-align:right}
 .stats{display:flex;justify-content:center;gap:18px;color:var(--muted);font-size:14px;margin-bottom:14px}
 .stats b{color:var(--text)}
 .up{display:flex;align-items:center;gap:12px;padding:12px;border-radius:14px;background:var(--panel2);margin-bottom:10px;text-align:left}
@@ -197,7 +198,7 @@ body{-webkit-user-select:none;user-select:none}
 /* ---- широкий экран (ПК) ---- */
 @media (min-width:900px){
   .app{max-width:1100px}
-  .cases{grid-template-columns:repeat(4,1fr)}
+  .cases{grid-template-columns:repeat(6,1fr)}
   .grid{grid-template-columns:repeat(6,1fr)}
   .prof{grid-template-columns:repeat(3,1fr)}
   .modal{max-width:560px}
@@ -231,12 +232,12 @@ body{-webkit-user-select:none;user-select:none}
 // ===== ДАННЫЕ ИГРЫ =====
 // редкости: c — обычный, u — необычный, r — редкий, e — эпический, l — легендарный, m — мифический
 const RARITY = {
-  c: { name: "Обычный",     color: "#9aa4b2", w: 55 },
-  u: { name: "Необычный",   color: "#4caf6a", w: 27 },
-  r: { name: "Редкий",      color: "#3d8bfd", w: 12 },
-  e: { name: "Эпический",   color: "#a259ff", w: 4.5 },
-  l: { name: "Легендарный", color: "#ff9f1a", w: 1.3 },
-  m: { name: "Мифический",  color: "#ff3b5c", w: 0.2 },
+  c: { name: "Обычный",     color: "#9aa4b2", w: 50 },
+  u: { name: "Необычный",   color: "#4caf6a", w: 28 },
+  r: { name: "Редкий",      color: "#3d8bfd", w: 14 },
+  e: { name: "Эпический",   color: "#a259ff", w: 5.6 },
+  l: { name: "Легендарный", color: "#ff9f1a", w: 1.9 },
+  m: { name: "Мифический",  color: "#ff3b5c", w: 0.5 },
 };
 
 // [id, эмодзи, название, цена, редкость]
@@ -273,24 +274,57 @@ const ITEMS_RAW = [
   ["boat","🚤","Катер",8000000,"c"],["flat","🏢","Квартира в центре",12000000,"c"],["heli","🚁","Вертолёт",60000000,"u"],
   ["villa","🏡","Вилла у моря",150000000,"r"],["yacht","🛥️","Яхта",300000000,"e"],["jet","🛩️","Частный самолёт",700000000,"l"],
   ["island","🏝️","Собственный остров",2000000000,"m"],
+  // бабушкин сундук
+  ["mittens","🧤","Вязаные варежки",60,"c"],["jar","🫙","Банка огурцов",80,"c"],["slippers","🩴","Тапочки",120,"c"],
+  ["teapot","🫖","Чайник в горошек",150,"c"],["radio","📻","Радиоприёмник",250,"u"],["carpet","🧶","Ковёр на стену",350,"u"],
+  ["samovar","🍵","Самовар",700,"r"],["crystal","🥂","Хрустальный сервиз",1200,"e"],["oldcoins","🪙","Старинные монеты",2500,"l"],
+  ["matryoshka","🪆","Антикварная матрёшка",6000,"m"],
+  // спортивный
+  ["rope","➰","Скакалка",300,"c"],["ball","⚽","Футбольный мяч",900,"c"],["dumbbell","🏋️","Гантели",1500,"c"],
+  ["boots","🥾","Бутсы",3000,"u"],["racket","🎾","Теннисная ракетка",4000,"u"],["skate","🛹","Скейтборд",6000,"u"],
+  ["gloves","🥊","Боксёрские перчатки",5000,"r"],["snowboard","🏂","Сноуборд",15000,"r"],["treadmill","🏃","Беговая дорожка",35000,"e"],
+  ["cup","🏆","Кубок чемпиона",60000,"l"],["ebike","🚴","Электровелосипед",120000,"m"],
+  // бренды
+  ["bcap","🧢","Брендовая кепка",15000,"c"],["tie","👔","Шёлковый галстук",18000,"c"],["scarf","🧣","Кашемировый шарф",30000,"c"],
+  ["limsneak","👟","Лимитированные кроссовки",80000,"u"],["heels","👠","Дизайнерские туфли",100000,"u"],["puffer","🧥","Пуховик люкс-бренда",120000,"u"],
+  ["suit","🤵","Костюм на заказ",250000,"r"],["clutch","👛","Клатч из кожи питона",400000,"e"],["collab","✨","Коллаборация-лимитка",900000,"l"],
+  ["couture","👗","Платье от кутюр",2500000,"m"],
+  // крипто
+  ["hwallet","🔑","Аппаратный кошелёк",50000,"c"],["homeminer","🖥️","Майнер для дома",150000,"c"],["nft","🖼️","NFT-картинка",250000,"c"],
+  ["asic","📟","ASIC-майнер",600000,"u"],["rack","🗄️","Стойка серверов",1200000,"u"],["farm","⚡","Майнинг-ферма",3000000,"r"],
+  ["datacenter","🏭","Мини-дата-центр",8000000,"e"],["whale","🐋","Кошелёк кита",20000000,"l"],["genesis","🧬","Генезис-блок",60000000,"m"],
+  // недвижимость
+  ["shell","🏚️","Гараж-ракушка",400000,"c"],["dormroom","🛏️","Комната в общаге",1500000,"c"],["dacha","🌻","Дача",3000000,"c"],
+  ["studio","🏠","Студия",6000000,"u"],["newflat","🏢","Двушка в новостройке",12000000,"u"],["townhouse","🏘️","Таунхаус",25000000,"r"],
+  ["cottage","🏰","Коттедж",50000000,"e"],["penthouse","🌆","Пентхаус",120000000,"l"],["skyscraper","🏙️","Небоскрёб",500000000,"m"],
 ];
 const ITEMS = {};
 ITEMS_RAW.forEach(([id, e, n, p, r]) => ITEMS[id] = { id, emoji: e, name: n, price: p, rarity: r });
 
 const CASES = [
-  { id: "school", name: "Школьный",  emoji: "🎒", color: "#4caf6a", price: 650,
+  { id: "granny", name: "Бабушкин сундук", emoji: "🧶", color: "#c97b63", price: 390,
+    items: ["mittens","jar","slippers","teapot","radio","carpet","samovar","crystal","oldcoins","matryoshka"] },
+  { id: "school", name: "Школьный",  emoji: "🎒", color: "#4caf6a", price: 840,
     items: ["pen","eraser","notebook","ruler","gum","pencilcase","calc","wiredph","backpack","kidtab","oldphone","oldlaptop"] },
-  { id: "street", name: "Уличный",   emoji: "🧢", color: "#3d8bfd", price: 2800,
+  { id: "street", name: "Уличный",   emoji: "🧢", color: "#3d8bfd", price: 3300,
     items: ["socks","shawarma","cap","tshirt","powerbank","speaker","hoodie","scooter","sneakers","smartwatch","bike","moped"] },
-  { id: "gamer",  name: "Геймерский",emoji: "🎮", color: "#a259ff", price: 7900,
+  { id: "sport",  name: "Спортивный", emoji: "⚽", color: "#2bb673", price: 7000,
+    items: ["rope","ball","dumbbell","boots","racket","skate","gloves","snowboard","treadmill","cup","ebike"] },
+  { id: "gamer",  name: "Геймерский",emoji: "🎮", color: "#a259ff", price: 9800,
     items: ["mousepad","mouse","keyboard","headset","gamepad","chair","monitor","console","gpu","gamingpc"] },
-  { id: "tech",   name: "Техно",     emoji: "📱", color: "#00b8d9", price: 36000,
+  { id: "tech",   name: "Техно",     emoji: "📱", color: "#00b8d9", price: 43000,
     items: ["band","buds","tablet","phone","camera","vr","laptop","drone","flagship","ultrabook","robodog"] },
-  { id: "lux",    name: "Люкс",      emoji: "💎", color: "#ff9f1a", price: 210000,
+  { id: "brand",  name: "Бренды",    emoji: "👗", color: "#e84a8a", price: 130000,
+    items: ["bcap","tie","scarf","limsneak","heels","puffer","suit","clutch","collab","couture"] },
+  { id: "lux",    name: "Люкс",      emoji: "💎", color: "#ff9f1a", price: 260000,
     items: ["perfume","glasses","bag","ring","fur","watch","diamond","painting","goldbar"] },
-  { id: "garage", name: "Гараж",     emoji: "🚗", color: "#e5484d", price: 1950000,
+  { id: "crypto", name: "Крипто",    emoji: "🪙", color: "#f7931a", price: 1900000,
+    items: ["hwallet","homeminer","nft","asic","rack","farm","datacenter","whale","genesis"] },
+  { id: "garage", name: "Гараж",     emoji: "🚗", color: "#e5484d", price: 2600000,
     items: ["lada","moto","usedcar","suv","retro","sportscar","hypercar","bolide"] },
-  { id: "oligarch", name: "Олигарх", emoji: "👑", color: "#ffd23f", price: 70000000,
+  { id: "realty", name: "Недвижимость", emoji: "🏠", color: "#6c8cff", price: 15000000,
+    items: ["shell","dormroom","dacha","studio","newflat","townhouse","cottage","penthouse","skyscraper"] },
+  { id: "oligarch", name: "Олигарх", emoji: "👑", color: "#ffd23f", price: 85000000,
     items: ["boat","flat","heli","villa","yacht","jet","island"] },
 ];
 
@@ -792,12 +826,22 @@ const DESC = {
            ["подарок, просто не мой стиль", "проверено у оценщика", "редкая вещь, такую сейчас не найти"]],
   garage: [["один владелец, не бит, не крашен", "пробег честный", "техническое обслуживание вовремя"],
            ["зимняя резина в подарок", "документы в порядке, без долгов и арестов", "заводится с пол-оборота"]],
+  granny: [["хранилось у бабушки в серванте", "состояние отличное для своих лет", "всё целое, без сколов"],
+           ["настоящий винтаж, сейчас такого не делают", "бабушка разрешила продать", "пахнет детством"]],
+  sport:  [["использовал всего сезон", "состояние отличное", "без повреждений"],
+           ["подойдёт и новичку, и профи", "продаю, потому что сменил вид спорта", "проверено на тренировках"]],
+  brand:  [["оригинал, есть бирки и чек", "носил пару раз", "хранилось в чехле"],
+           ["лимитированная коллекция", "размер ходовой", "проверено по коду подлинности"]],
+  crypto: [["работает круглосуточно без сбоев", "охлаждение в порядке", "все комплектующие оригинальные"],
+           ["окупается быстрее, чем кажется", "продаю, потому что выхожу из темы", "помогу настроить"]],
+  realty: [["документы чистые, один собственник", "свежий ремонт", "заезжай и живи"],
+           ["рядом метро и вся инфраструктура", "вид из окна огонь", "можно в ипотеку"]],
   oligarch: [["все документы в полном порядке", "состояние идеальное", "обслуживается профессиональной командой"],
              ["передам с полным сопровождением сделки", "вид просто шикарный", "таких единицы во всей стране"]],
 };
 function describeItem(it) {
   const cs = CASES.find(x => x.items.includes(it.id));
-  const [a, b] = DESC[cs ? cs.id : "school"];
+  const [a, b] = DESC[cs && DESC[cs.id] ? cs.id : "school"];
   const end = pick(["Цена честная, за такие деньги лучше не найдёте 👍", "Могу показать фото или видео.", "Брал себе, но деньги сейчас нужнее."]);
   return `${it.name}: ${pick(a)}, ${pick(b)}. ${end}`;
 }
@@ -894,20 +938,52 @@ function renderChatView(c, keepScroll) {
 }
 
 // ---------- работа (кликер) ----------
-const clickValue = () => Math.round(10 * Math.pow(1.6, S.work.click));
-const passiveValue = () => S.work.passive === 0 ? 0 : Math.round(15 * Math.pow(1.75, S.work.passive - 1));
-const clickCost = () => Math.round(300 * Math.pow(2.1, S.work.click));
-const passiveCost = () => Math.round(1500 * Math.pow(2.2, S.work.passive));
+// Экономика фриланса: заработок ограничен энергией, у прокачки есть потолок.
+// Автокликер не даёт преимущества: без энергии клики ничего не приносят,
+// а слишком частые/«роботские» клики игнорируются.
+const WORK_MAX = 25;                                       // максимальный уровень улучшений
+const ENERGY_MAX = 100, ENERGY_REGEN = 1;                  // энергии в секунду
+const clickLvl = () => Math.min(WORK_MAX, S.work.click), passLvl = () => Math.min(WORK_MAX, S.work.passive);
+const clickAt = n => Math.round(10 * Math.pow(1.45, n));
+const passAt = n => n === 0 ? 0 : Math.round(8 * Math.pow(1.5, n - 1));
+const clickValue = () => clickAt(clickLvl());
+const passiveValue = () => passAt(passLvl());
+const clickCost = () => Math.round(300 * Math.pow(2.3, clickLvl()));
+const passiveCost = () => Math.round(2000 * Math.pow(2.45, passLvl()));
+let clickTimes = [], robotUntil = 0;
+function energy() {
+  const w = S.work; if (w.en == null) { w.en = ENERGY_MAX; w.enAt = Date.now(); }
+  const now = Date.now(); w.en = Math.min(ENERGY_MAX, w.en + (now - (w.enAt || now)) / 1000 * ENERGY_REGEN); w.enAt = now;
+  return w.en;
+}
+// проверка клика: true — засчитать
+function workClickOk(ev) {
+  const now = Date.now();
+  if (ev && ev.isTrusted === false) return false;                       // сгенерированный скриптом клик
+  if (now < robotUntil) return "robot";
+  clickTimes.push(now); if (clickTimes.length > 40) clickTimes.shift();
+  const last = clickTimes.filter(t => now - t < 1000).length;
+  if (last > 15) return "fast";                                           // больше 15 кликов в секунду — человек так не может
+  if (clickTimes.length >= 30) {                                          // идеально ровные интервалы = автокликер
+    const iv = clickTimes.slice(1).map((t, i) => t - clickTimes[i]);
+    const avg = iv.reduce((a, b) => a + b, 0) / iv.length;
+    const sd = Math.sqrt(iv.reduce((a, b) => a + (b - avg) * (b - avg), 0) / iv.length);
+    if (avg < 250 && sd < 3) { robotUntil = now + 60000; clickTimes = []; return "robot"; }
+  }
+  if (energy() < 1) return "tired";
+  return true;
+}
 
 function renderWork() {
   $("#screen").innerHTML = `<div class="work">
     <h2>Работа</h2><div class="sub">Нет денег на кейс? Поработай на фрилансе!</div>
     <div class="pc" id="pc" role="button">💻</div>
+    <div class="energy"><div class="ebar"><i id="ebar"></i></div><span id="etx"></span></div>
     <div class="stats"><span>За клик: <b>${fmt(clickValue())} ₽</b></span><span>Пассивно: <b>${fmt(passiveValue())} ₽/с</b></span></div>
-    <div class="up"><div class="ic">📚</div><div class="tx"><b>Курсы программирования</b><small>Ур. ${S.work.click} → за клик ${fmt(Math.round(10 * Math.pow(1.6, S.work.click + 1)))} ₽</small></div>
-      <button class="btn y" id="b1" ${S.money < clickCost() ? "disabled" : ""}>${short(clickCost())} ₽</button></div>
-    <div class="up"><div class="ic">🤖</div><div class="tx"><b>Нанять помощника</b><small>Ур. ${S.work.passive} → ${fmt(Math.round(15 * Math.pow(1.75, S.work.passive)))} ₽ в секунду</small></div>
-      <button class="btn y" id="b2" ${S.money < passiveCost() ? "disabled" : ""}>${short(passiveCost())} ₽</button></div>
+    <div class="up"><div class="ic">📚</div><div class="tx"><b>Курсы программирования</b><small>${clickLvl() >= WORK_MAX ? `Ур. ${WORK_MAX} — максимум` : `Ур. ${clickLvl()} → за клик ${fmt(clickAt(clickLvl() + 1))} ₽`}</small></div>
+      ${clickLvl() >= WORK_MAX ? `<button class="btn" disabled>MAX</button>` : `<button class="btn y" id="b1" ${S.money < clickCost() ? "disabled" : ""}>${short(clickCost())} ₽</button>`}</div>
+    <div class="up"><div class="ic">🤖</div><div class="tx"><b>Нанять помощника</b><small>${passLvl() >= WORK_MAX ? `Ур. ${WORK_MAX} — максимум` : `Ур. ${passLvl()} → ${fmt(passAt(passLvl() + 1))} ₽ в секунду`}</small></div>
+      ${passLvl() >= WORK_MAX ? `<button class="btn" disabled>MAX</button>` : `<button class="btn y" id="b2" ${S.money < passiveCost() ? "disabled" : ""}>${short(passiveCost())} ₽</button>`}</div>
     ${adsOn() ? `<div class="up"><div class="ic">📺</div><div class="tx"><b>Подработка: реклама</b><small>Посмотри ролик и получи ${short(adReward())} ₽</small></div>
       <button class="btn ad" id="b3" ${Date.now() < adCooldown ? "disabled" : ""}>${Date.now() < adCooldown ? Math.ceil((adCooldown - Date.now()) / 1000) + " с" : "Смотреть"}</button></div>` : ""}
   </div>`;
@@ -915,18 +991,33 @@ function renderWork() {
   if (b3) b3.onclick = () => showRewarded(() => {
     const v = adReward(); addMoney(v); save(); snd("coin"); confetti(60);
     toast(`📺 Спасибо за просмотр! +${fmt(v)} ₽`);
-    adCooldown = Date.now() + 60000; if (screen === "work") renderWork();
+    adCooldown = Date.now() + 90000; if (screen === "work") renderWork();
   });
   $("#pc").onpointerdown = ev => {
+    const ok = workClickOk(ev);
+    if (ok !== true) {
+      if (ok === "tired" && Date.now() - (window.__tiredMsg || 0) > 3000) { window.__tiredMsg = Date.now(); toast("😮‍💨 Ты устал! Энергия восстанавливается: +1 в секунду"); }
+      if (ok === "robot" && Date.now() - (window.__robotMsg || 0) > 5000) { window.__robotMsg = Date.now(); toast("🤖 Похоже на автокликер. Работа на паузе 1 минуту"); }
+      updateEnergy(); return;
+    }
+    S.work.en -= 1;
     const v = clickValue(); addMoney(v); S.stats.earnedWork = (S.stats.earnedWork || 0) + v; S.stats.clicks = (S.stats.clicks || 0) + 1; snd("click");
     const f = document.createElement("div"); f.className = "float"; f.textContent = "+" + fmt(v) + " ₽";
     const r = $("#app").getBoundingClientRect();
     f.style.left = (ev.clientX - r.left - 20) + "px"; f.style.top = (ev.clientY - r.top - 30) + "px";
     $("#app").appendChild(f); setTimeout(() => f.remove(), 800);
-    updateWorkButtons();
+    updateWorkButtons(); updateEnergy();
   };
-  $("#b1").onclick = () => { if (S.money < clickCost()) return; addMoney(-clickCost()); S.work.click++; save(); renderWork(); };
-  $("#b2").onclick = () => { if (S.money < passiveCost()) return; addMoney(-passiveCost()); S.work.passive++; save(); renderWork(); };
+  const b1 = $("#b1"), b2 = $("#b2");
+  if (b1) b1.onclick = () => { if (S.money < clickCost() || clickLvl() >= WORK_MAX) return; addMoney(-clickCost()); S.work.click = clickLvl() + 1; save(); renderWork(); };
+  if (b2) b2.onclick = () => { if (S.money < passiveCost() || passLvl() >= WORK_MAX) return; addMoney(-passiveCost()); S.work.passive = passLvl() + 1; save(); renderWork(); };
+  updateEnergy();
+}
+function updateEnergy() {
+  const b = $("#ebar"), t = $("#etx"); if (!b) return;
+  const en = Math.floor(energy());
+  b.style.width = en + "%"; b.className = en < 15 ? "low" : "";
+  t.textContent = Date.now() < robotUntil ? `🤖 Пауза ${Math.ceil((robotUntil - Date.now()) / 1000)} с` : `⚡ ${en}/${ENERGY_MAX}`;
 }
 function updateWorkButtons() {
   const b1 = $("#b1"), b2 = $("#b2");
@@ -935,7 +1026,8 @@ function updateWorkButtons() {
 }
 setInterval(() => {
   const p = passiveValue();
-  if (p) { addMoney(p); if (screen === "work") updateWorkButtons(); }
+  if (p) addMoney(p);
+  if (screen === "work") { updateWorkButtons(); updateEnergy(); }
   if (screen === "cases") document.querySelectorAll(".case").forEach(b => { const c = CASES.find(x => x.id === b.dataset.c); b.classList.toggle("locked", S.money < c.price); });
 }, 1000);
 setInterval(save, 5000);
@@ -988,7 +1080,7 @@ $("#gift").onclick = () => {
       <div class="iprice">Следующий через ${h} ч ${m} мин</div><div class="btns"><button class="btn" id="ok">Ок</button></div></div>`;
   } else {
     const streak = (Date.now() - S.gift.last < 2 * DAY) ? Math.min(7, S.gift.streak + 1) : 1;
-    const sum = Math.max(1500, Math.round(netWorth() * 0.03)) * streak;
+    const sum = Math.min(5e7, Math.max(1500, Math.round(netWorth() * 0.02)) * streak);
     S.gift = { last: Date.now(), streak }; addMoney(sum); save();
     ov.innerHTML = `<div class="modal"><div class="drop">🎁</div><div class="iname">Ежедневный подарок!</div>
       <div class="pricebig">+${fmt(sum)} ₽</div><div class="iprice">День ${streak} из 7 — заходи каждый день, награда растёт</div>
@@ -1012,7 +1104,7 @@ function confirmBox(title, text, yes, onYes) {
 // =====================================================================
 //                       ВЕРСИЯ 1.1 — НОВЫЕ ФИШКИ
 // =====================================================================
-const VERSION = "1.2";
+const VERSION = "1.4";
 
 // ---------- звуки (синтез, без файлов) ----------
 let AC = null;
@@ -1110,6 +1202,11 @@ const EVENTS = [
   { t: "🚗 Ажиотаж на авторынке! Машины +30%", cs: "garage", mult: 1.3 },
   { t: "🎒 Сезон школы! Школьные вещи +50%", cs: "school", mult: 1.5 },
   { t: "💎 Богачи скупают люкс! Люкс +30%", cs: "lux", mult: 1.3 },
+  { t: "🏟️ Чемпионат мира! Спортивные вещи +40%", cs: "sport", mult: 1.4 },
+  { t: "👗 Неделя моды! Брендовые вещи +35%", cs: "brand", mult: 1.35 },
+  { t: "🚀 Крипта летит в космос! Крипто +40%", cs: "crypto", mult: 1.4 },
+  { t: "🏠 Ипотека подешевела! Недвижимость +25%", cs: "realty", mult: 1.25 },
+  { t: "🧶 Мода на винтаж! Вещи из бабушкиного сундука +60%", cs: "granny", mult: 1.6 },
   { t: "📉 Кризис! Все покупатели платят на 20% меньше", mult: 0.8 },
   { t: "⚡ Час пик! Покупатели пишут в 2 раза чаще", rush: true },
   { t: "🚨 Волна мошенников! Будь внимателен в чатах", scam: true },
@@ -1218,7 +1315,7 @@ function whatsNew() {
       <div class="news">📦 Открывай кейсы — там всё, от ручки до острова<br>💬 Выставляй вещи и торгуйся с покупателями в чатах<br>⚠️ Остерегайся мошенников и троллей<br>💻 Нет денег — поработай на фрилансе<br>🏆 Собери коллекцию и стань олигархом!</div>
       <div class="btns"><button class="btn y" id="ok">Погнали!</button></div></div>`
     : `<div class="modal"><div class="drop">🎉</div><div class="iname">Обновление ${VERSION}</div>
-      <div class="news">${BUILD !== "web" ? "🏆 <b>Топ игроков</b><br>" : "🏆 <b>Топ игроков</b> и 👥 <b>«Позови друга»</b> — +50 000 ₽ вам обоим (в Telegram)<br>"}⬆️ <b>Апгрейд</b> — рискни вещью и получи дороже (до ×10)<br>📈 <b>События рынка</b> — хайп, кризис, час пик, волна мошенников<br>👵 Новые покупатели: <b>бабушка</b>, <b>блогер</b> с рекламой и <b>перекупщик</b><br>🏆 <b>19 достижений</b> с наградами — смотри в Профиле<br>🔊 <b>Звуки</b> и 🎊 <b>конфетти</b> за редкие вещи<br>🛠 Исправлены мелкие ошибки</div>
+      <div class="news">📦 <b>5 новых кейсов</b>: Бабушкин сундук, Спортивный, Бренды, Крипто и Недвижимость — 118 предметов в коллекции<br>🍀 <b>Шанс редких вещей выше</b>: эпические, легендарные и мифические выпадают чаще<br>⚡ <b>Энергия на фрилансе</b>: работа стала честнее, автокликеры больше не помогают<br>⚖️ Пересчитаны цены кейсов и награды<br>📈 Новые события рынка</div>
       <div class="btns"><button class="btn y" id="ok">Круто!</button></div></div>`;
   $("#app").appendChild(ov);
   ov.querySelector("#ok").onclick = () => { ov.remove(); snd("win"); };
@@ -1393,7 +1490,7 @@ document.addEventListener("visibilitychange", () => setMute("hidden", document.h
 window.addEventListener("blur", () => setMute("blur", true));
 window.addEventListener("focus", () => setMute("blur", false));
 document.addEventListener("contextmenu", e => e.preventDefault());
-const adReward = () => Math.max(3000, Math.round(netWorth() * 0.03 / 100) * 100);
+const adReward = () => Math.max(3000, Math.min(1e7, Math.round(netWorth() * 0.015 / 100) * 100));
 
 function gameplay(on) { try { YSDK && YSDK.features.GameplayAPI && (on ? YSDK.features.GameplayAPI.start() : YSDK.features.GameplayAPI.stop()); } catch (e) {} }
 function adsOn() { return !!YSDK || !!VKB; }
