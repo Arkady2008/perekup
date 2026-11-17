@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Перекуп — кейсы, сделки и чаты</title>
 <script src="https://unpkg.com/@vkontakte/vk-bridge@2/dist/browser.min.js"></script>
+<script>window.vkBridge||document.write('<script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2/dist/browser.min.js"><\/script>')</script>
 <style>
 :root{
   --bg:#0f1420; --panel:#171e2e; --panel2:#1f2840; --line:#2a3550; --text:#e9eef8; --muted:#8d99b3;
@@ -43,6 +44,7 @@ body.tg .app{max-width:none;box-shadow:none}
 .case{position:relative;border-radius:18px;padding:14px;background:linear-gradient(160deg,var(--c) -40%,var(--panel2) 70%);border:2px solid color-mix(in srgb,var(--c) 60%,transparent);text-align:center;overflow:hidden}
 .case .big{font-size:52px;filter:drop-shadow(0 6px 10px rgba(0,0,0,.4))}
 .case .nm{font-weight:800;font-size:16px;margin-top:4px}
+.case .nm.long{font-size:13px}
 .case .pr{margin-top:8px;display:inline-block;background:#0b101b;border-radius:10px;padding:5px 12px;font-weight:800;color:var(--accent)}
 .case.locked{opacity:.55}
 .case .range{font-size:11px;color:var(--muted);margin-top:4px}
@@ -199,6 +201,7 @@ body{-webkit-user-select:none;user-select:none}
 @media (min-width:900px){
   .app{max-width:1100px}
   .cases{grid-template-columns:repeat(6,1fr)}
+  .case{padding:14px 8px}
   .grid{grid-template-columns:repeat(6,1fr)}
   .prof{grid-template-columns:repeat(3,1fr)}
   .modal{max-width:560px}
@@ -403,7 +406,7 @@ function renderCases() {
     <h2>Кейсы</h2><div class="sub">Открывай кейсы и продавай находки дороже!</div>
     <div class="cases">${CASES.map(c => `
       <button class="case ${S.money < c.price ? "locked" : ""}" style="--c:${c.color}" data-c="${c.id}">
-        <div class="big">${c.emoji}</div><div class="nm">${c.name}</div>
+        <div class="big">${c.emoji}</div><div class="nm${c.name.length > 10 && !c.name.includes(" ") ? " long" : ""}">${c.name}</div>
         <div class="range">${caseRange(c)}</div>
         <div class="pr">${short(c.price)} ₽</div>
       </button>`).join("")}
@@ -1607,7 +1610,7 @@ const VK_CHUNK = 1200;                                   // значение к�
 const vkParams = new URLSearchParams(location.search);
 const vkAppId = () => vkParams.get("vk_app_id") || "";
 const vkLink = () => vkAppId() ? `https://vk.com/app${vkAppId()}` : "https://vk.com/apps";
-function vkSend(m, p) { return VKB.send(m, p || {}); }
+function vkSend(m, p) { return VKB ? VKB.send(m, p || {}) : Promise.reject(new Error("VK Bridge недоступен")); }
 function vkShowAd(format, onReward) {
   if (!VKB || adPlaying) return;
   adPlaying = true; setMute("ad", true);
@@ -1645,6 +1648,8 @@ async function vkLoad() {
   }
 }
 function renderVKTop() {
+  const all = Object.keys(ITEMS), have = all.filter(id => S.found[id]).length;
+  const best = S.stats.best ? ITEMS[S.stats.best] : null;
   $("#screen").innerHTML = `<h2>🏆 Топ перекупов</h2>
     <div class="sub">Твоё состояние: <b>${fmt(netWorth())} ₽</b></div>
     <div class="invite"><div class="e">👥</div><div class="tx"><b>Играй с друзьями!</b><small>Позови друзей — посмотрим, кто первым станет олигархом</small></div></div>
@@ -1652,7 +1657,13 @@ function renderVKTop() {
       <button class="btn y" id="vinv">📨 Пригласить</button>
       <button class="btn" id="vshare">📢 Поделиться</button>
     </div>
-    <div class="empty">Общий рейтинг игроков появится в одном из ближайших обновлений 🔥</div>`;
+    <h2>Твои рекорды</h2>
+    <div class="prof">
+      <div class="stat"><small>Лучший дроп</small><b>${best ? best.emoji + " " + esc(best.name) : "—"}</b></div>
+      <div class="stat"><small>Коллекция</small><b>${have} / ${all.length}</b></div>
+      <div class="stat"><small>Открыто кейсов</small><b>${fmt(S.stats.opened)}</b></div>
+      <div class="stat"><small>Заработано продажами</small><b>${short(S.stats.earned)} ₽</b></div>
+    </div>`;
   $("#vinv").onclick = () => vkSend("VKWebAppShowInviteBox").catch(() => {});
   $("#vshare").onclick = () => vkSend("VKWebAppShare", { link: vkLink() }).catch(() => {});
 }
